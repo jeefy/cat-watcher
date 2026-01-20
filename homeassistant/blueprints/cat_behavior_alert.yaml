@@ -1,0 +1,121 @@
+blueprint:
+  name: Cat Behavior Alert
+  description: Send notification when a cat behavior is detected
+  domain: automation
+  author: Cat Watcher
+  input:
+    behavior:
+      name: Behavior
+      description: The cat behavior to monitor
+      selector:
+        select:
+          options:
+            - label: Eating
+              value: cat_eating
+            - label: Drinking
+              value: cat_drinking
+            - label: Vomiting
+              value: cat_vomiting
+            - label: Waiting at Door
+              value: cat_waiting
+            - label: Using Litterbox
+              value: cat_litterbox
+            - label: Yowling
+              value: cat_yowling
+    cat:
+      name: Cat (Optional)
+      description: Specific cat to monitor (leave empty for any cat)
+      default: ""
+      selector:
+        select:
+          options:
+            - label: Any Cat
+              value: ""
+            - label: Starbuck
+              value: starbuck
+            - label: Apollo
+              value: apollo
+            - label: Mia
+              value: mia
+    notify_device:
+      name: Notification Device
+      description: Device to send notification to
+      selector:
+        device:
+          integration: mobile_app
+    notification_title:
+      name: Notification Title
+      description: Title for the notification
+      default: "Cat Watcher Alert"
+      selector:
+        text:
+    notification_message:
+      name: Notification Message (Optional)
+      description: Custom message (leave empty for auto-generated)
+      default: ""
+      selector:
+        text:
+    critical:
+      name: Critical Notification
+      description: Make this a critical/high-priority notification
+      default: false
+      selector:
+        boolean:
+    cooldown_minutes:
+      name: Cooldown (minutes)
+      description: Minimum time between notifications
+      default: 5
+      selector:
+        number:
+          min: 1
+          max: 60
+          unit_of_measurement: minutes
+
+mode: single
+max_exceeded: silent
+
+trigger:
+  - platform: mqtt
+    topic: "cat_watcher/event"
+    id: mqtt_event
+
+variables:
+  behavior_input: !input behavior
+  cat_input: !input cat
+  custom_message: !input notification_message
+  payload: "{{ trigger.payload_json }}"
+  detected_behavior: "{{ payload.event_type }}"
+  detected_cat: "{{ payload.cat }}"
+  confidence: "{{ payload.confidence | round(2) }}"
+  camera: "{{ payload.camera }}"
+  behavior_name: "{{ detected_behavior | replace('cat_', '') | replace('_', ' ') | title }}"
+  cat_name: "{{ detected_cat | title }}"
+  auto_message: "{{ cat_name }} is {{ behavior_name }}{% if camera %} ({{ camera }}){% endif %}"
+  final_message: "{% if custom_message %}{{ custom_message }}{% else %}{{ auto_message }}{% endif %}"
+
+condition:
+  - condition: template
+    value_template: "{{ detected_behavior == behavior_input }}"
+  - condition: template
+    value_template: "{{ cat_input == '' or detected_cat == cat_input }}"
+
+action:
+  - service: notify.mobile_app_{{ device_attr(device_id(!input notify_device), 'name') | slugify }}
+    data:
+      title: !input notification_title
+      message: "{{ final_message }}"
+      data:
+        group: cat_watcher
+        tag: "cat_watcher_{{ detected_behavior }}_{{ detected_cat }}"
+        push:
+          sound:
+            name: "{% if critical %}default{% else %}none{% endif %}"
+            critical: !input critical
+          interruption-level: "{% if critical %}critical{% else %}active{% endif %}"
+        actions:
+          - action: "VIEW_CAMERA"
+            title: "View Camera"
+          - action: "DISMISS"
+            title: "Dismiss"
+  - delay:
+      minutes: !input cooldown_minutes

@@ -1,0 +1,154 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cat-watcher-web
+  namespace: cat-watcher
+  labels:
+    app.kubernetes.io/name: cat-watcher
+    app.kubernetes.io/component: web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cat-watcher
+      app.kubernetes.io/component: web
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: cat-watcher
+        app.kubernetes.io/component: web
+    spec:
+      # Init container to set permissions on PVC
+      initContainers:
+        - name: init-permissions
+          image: busybox:1.36
+          command: ['sh', '-c', 'mkdir -p /data/frames /data/training /data/detection /data/behavior_dataset && chown -R 1000:1000 /data /models']
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: models
+              mountPath: /models
+      containers:
+        - name: web
+          image: jeefy/cat-watcher:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            # Frigate configuration
+            - name: CAT_WATCHER__FRIGATE__URL
+              valueFrom:
+                configMapKeyRef:
+                  name: cat-watcher-config
+                  key: frigate.url
+            - name: CAT_WATCHER__FRIGATE__CAMERA
+              valueFrom:
+                configMapKeyRef:
+                  name: cat-watcher-config
+                  key: frigate.camera
+            # MQTT configuration
+            - name: CAT_WATCHER__MQTT__HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: cat-watcher-config
+                  key: mqtt.host
+            - name: CAT_WATCHER__MQTT__PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: cat-watcher-config
+                  key: mqtt.port
+            # Optional RTSP direct connection
+            - name: CAT_WATCHER__RTSP__URL
+              valueFrom:
+                configMapKeyRef:
+                  name: cat-watcher-config
+                  key: rtsp.url
+                  optional: true
+            # Secrets (optional)
+            - name: CAT_WATCHER__FRIGATE__RTSP_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: cat-watcher-secrets
+                  key: rtsp.username
+                  optional: true
+            - name: CAT_WATCHER__FRIGATE__RTSP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cat-watcher-secrets
+                  key: rtsp.password
+                  optional: true
+            - name: CAT_WATCHER__MQTT__USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: cat-watcher-secrets
+                  key: mqtt.username
+                  optional: true
+            - name: CAT_WATCHER__MQTT__PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cat-watcher-secrets
+                  key: mqtt.password
+                  optional: true
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+              # GPU for inference
+              nvidia.com/gpu: "1"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+              nvidia.com/gpu: "1"
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: models
+              mountPath: /models
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: cat-watcher-data
+        - name: models
+          persistentVolumeClaim:
+            claimName: cat-watcher-models
+      # Schedule on nodes with Nvidia GPUs (requires Nvidia GPU Operator)
+      nodeSelector:
+        nvidia.com/gpu.present: "true"
+      # Tolerate GPU nodes
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cat-watcher-web
+  namespace: cat-watcher
+  labels:
+    app.kubernetes.io/name: cat-watcher
+    app.kubernetes.io/component: web
+spec:
+  type: LoadBalancer
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: cat-watcher
+    app.kubernetes.io/component: web

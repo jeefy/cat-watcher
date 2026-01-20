@@ -1,0 +1,32 @@
+# Kustomize configuration for cat-watcher deployment
+# 
+# Usage:
+#   1. Copy secrets.yaml.template to secrets.yaml and fill in values
+#   2. Update configmap.yaml with your environment-specific values
+#   3. Apply: kubectl apply -k k8s/
+#
+# Or apply individual files:
+#   kubectl apply -f k8s/namespace.yaml
+#   kubectl apply -f k8s/secrets.yaml      # Create from template first!
+#   kubectl apply -f k8s/configmap.yaml
+#   kubectl apply -f k8s/pvc.yaml
+#   kubectl apply -f k8s/web-deployment.yaml
+#   kubectl apply -f k8s/deployment.yaml   # Optional: inference service
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: cat-watcher
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - pvc.yaml
+  - web-deployment.yaml
+  # Uncomment to include inference service
+  # - deployment.yaml
+  # Uncomment to include labeling service
+  # - service.yaml
+
+# Note: secrets.yaml must be created manually from secrets.yaml.template
+# Do NOT commit secrets.yaml to git!

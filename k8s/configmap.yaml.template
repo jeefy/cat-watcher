@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cat-watcher-config
+  namespace: cat-watcher
+  labels:
+    app.kubernetes.io/name: cat-watcher
+data:
+  # Note: Most configuration is now stored in the SQLite database
+  # and configurable via the web UI at Settings page.
+  # 
+  # Settings that can be configured via UI:
+  #   - Frigate URL and cameras
+  #   - Detection thresholds and frame rate
+  #   - MQTT broker and port
+  #   - Event durations
+  #
+  # Only secrets (RTSP/MQTT credentials) remain in k8s secrets.
+  placeholder: "config-is-now-in-database"

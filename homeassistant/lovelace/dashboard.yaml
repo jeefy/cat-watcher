@@ -1,0 +1,284 @@
+# Cat Watcher - Lovelace Dashboard
+#
+# A complete dashboard for monitoring your cats.
+# Import this into Home Assistant or copy relevant sections.
+
+title: Cat Watcher
+views:
+  - title: Overview
+    path: overview
+    icon: mdi:cat
+    badges: []
+    cards:
+      # Status Row
+      - type: horizontal-stack
+        cards:
+          - type: entity
+            entity: binary_sensor.cat_watcher_status
+            name: Service Status
+            icon: mdi:server
+
+          - type: entity
+            entity: sensor.cat_watcher_events_processed
+            name: Events Today
+            icon: mdi:counter
+
+      # Cat Status Cards
+      - type: horizontal-stack
+        cards:
+          - type: custom:mushroom-template-card
+            entity: binary_sensor.cat_watcher_starbuck_present
+            primary: Starbuck
+            secondary: >
+              {% if is_state(entity, 'on') %}
+                {{ states('sensor.cat_watcher_starbuck_behavior') | replace('cat_', '') | title }}
+              {% else %}
+                Not detected
+              {% endif %}
+            icon: mdi:cat
+            icon_color: >
+              {% if is_state(entity, 'on') %}green{% else %}grey{% endif %}
+            tap_action:
+              action: more-info
+
+          - type: custom:mushroom-template-card
+            entity: binary_sensor.cat_watcher_apollo_present
+            primary: Apollo
+            secondary: >
+              {% if is_state(entity, 'on') %}
+                {{ states('sensor.cat_watcher_apollo_behavior') | replace('cat_', '') | title }}
+              {% else %}
+                Not detected
+              {% endif %}
+            icon: mdi:cat
+            icon_color: >
+              {% if is_state(entity, 'on') %}blue{% else %}grey{% endif %}
+            tap_action:
+              action: more-info
+
+          - type: custom:mushroom-template-card
+            entity: binary_sensor.cat_watcher_mia_present
+            primary: Mia
+            secondary: >
+              {% if is_state(entity, 'on') %}
+                {{ states('sensor.cat_watcher_mia_behavior') | replace('cat_', '') | title }}
+              {% else %}
+                Not detected
+              {% endif %}
+            icon: mdi:cat
+            icon_color: >
+              {% if is_state(entity, 'on') %}pink{% else %}grey{% endif %}
+            tap_action:
+              action: more-info
+
+      # Latest Detection
+      - type: markdown
+        title: Latest Detection
+        content: >
+          {% set latest = state_attr('sensor.cat_watcher_latest_detection', 'summary') %}
+          {% if latest %}
+          **{{ states('sensor.cat_watcher_latest_detection') }}**
+
+          - Cat: {{ state_attr('sensor.cat_watcher_latest_detection', 'cat') | title }}
+          - Behavior: {{ state_attr('sensor.cat_watcher_latest_detection', 'behavior') | replace('cat_', '') | title }}
+          - Confidence: {{ (state_attr('sensor.cat_watcher_latest_detection', 'confidence') * 100) | round(1) }}%
+          - Time: {{ state_attr('sensor.cat_watcher_latest_detection', 'timestamp') | as_timestamp | timestamp_custom('%H:%M:%S') }}
+          {% else %}
+          No recent detections
+          {% endif %}
+
+      # Behavior Activity
+      - type: glance
+        title: Current Activity
+        entities:
+          - entity: binary_sensor.cat_watcher_cat_eating
+            name: Eating
+          - entity: binary_sensor.cat_watcher_cat_drinking
+            name: Drinking
+          - entity: binary_sensor.cat_watcher_cat_waiting
+            name: Waiting
+          - entity: binary_sensor.cat_watcher_cat_litterbox
+            name: Litterbox
+          - entity: binary_sensor.cat_watcher_cat_yowling
+            name: Yowling
+          - entity: binary_sensor.cat_watcher_cat_vomiting
+            name: Vomiting
+
+      # Health Alerts
+      - type: conditional
+        conditions:
+          - entity: binary_sensor.cat_watcher_cat_vomiting
+            state: "on"
+        card:
+          type: custom:mushroom-template-card
+          primary: Health Alert
+          secondary: Vomiting detected!
+          icon: mdi:alert-circle
+          icon_color: red
+          card_mod:
+            style: |
+              ha-card {
+                background-color: rgba(255, 0, 0, 0.1);
+                border: 2px solid red;
+              }
+
+  - title: Starbuck
+    path: starbuck
+    icon: mdi:cat
+    cards:
+      - type: custom:mushroom-title-card
+        title: Starbuck
+        subtitle: Cat Activity
+
+      - type: entities
+        entities:
+          - entity: binary_sensor.cat_watcher_starbuck_present
+            name: Currently Present
+          - entity: sensor.cat_watcher_starbuck_behavior
+            name: Last Behavior
+          - entity: sensor.cat_watcher_starbuck_last_seen
+            name: Last Seen
+          - type: divider
+          - entity: binary_sensor.cat_watcher_starbuck_cat_eating
+            name: Eating
+          - entity: binary_sensor.cat_watcher_starbuck_cat_drinking
+            name: Drinking
+          - entity: binary_sensor.cat_watcher_starbuck_cat_waiting
+            name: Waiting
+          - entity: binary_sensor.cat_watcher_starbuck_cat_litterbox
+            name: Litterbox
+          - entity: binary_sensor.cat_watcher_starbuck_cat_yowling
+            name: Yowling
+          - entity: binary_sensor.cat_watcher_starbuck_cat_vomiting
+            name: Vomiting
+
+      - type: history-graph
+        title: Activity History
+        hours_to_show: 24
+        entities:
+          - entity: binary_sensor.cat_watcher_starbuck_present
+            name: Present
+          - entity: binary_sensor.cat_watcher_starbuck_cat_eating
+            name: Eating
+          - entity: binary_sensor.cat_watcher_starbuck_cat_drinking
+            name: Drinking
+
+  - title: Apollo
+    path: apollo
+    icon: mdi:cat
+    cards:
+      - type: custom:mushroom-title-card
+        title: Apollo
+        subtitle: Cat Activity
+
+      - type: entities
+        entities:
+          - entity: binary_sensor.cat_watcher_apollo_present
+            name: Currently Present
+          - entity: sensor.cat_watcher_apollo_behavior
+            name: Last Behavior
+          - entity: sensor.cat_watcher_apollo_last_seen
+            name: Last Seen
+          - type: divider
+          - entity: binary_sensor.cat_watcher_apollo_cat_eating
+            name: Eating
+          - entity: binary_sensor.cat_watcher_apollo_cat_drinking
+            name: Drinking
+          - entity: binary_sensor.cat_watcher_apollo_cat_waiting
+            name: Waiting
+          - entity: binary_sensor.cat_watcher_apollo_cat_litterbox
+            name: Litterbox
+          - entity: binary_sensor.cat_watcher_apollo_cat_yowling
+            name: Yowling
+          - entity: binary_sensor.cat_watcher_apollo_cat_vomiting
+            name: Vomiting
+
+      - type: history-graph
+        title: Activity History
+        hours_to_show: 24
+        entities:
+          - entity: binary_sensor.cat_watcher_apollo_present
+            name: Present
+          - entity: binary_sensor.cat_watcher_apollo_cat_eating
+            name: Eating
+          - entity: binary_sensor.cat_watcher_apollo_cat_drinking
+            name: Drinking
+
+  - title: Mia
+    path: mia
+    icon: mdi:cat
+    cards:
+      - type: custom:mushroom-title-card
+        title: Mia
+        subtitle: Cat Activity
+
+      - type: entities
+        entities:
+          - entity: binary_sensor.cat_watcher_mia_present
+            name: Currently Present
+          - entity: sensor.cat_watcher_mia_behavior
+            name: Last Behavior
+          - entity: sensor.cat_watcher_mia_last_seen
+            name: Last Seen
+          - type: divider
+          - entity: binary_sensor.cat_watcher_mia_cat_eating
+            name: Eating
+          - entity: binary_sensor.cat_watcher_mia_cat_drinking
+            name: Drinking
+          - entity: binary_sensor.cat_watcher_mia_cat_waiting
+            name: Waiting
+          - entity: binary_sensor.cat_watcher_mia_cat_litterbox
+            name: Litterbox
+          - entity: binary_sensor.cat_watcher_mia_cat_yowling
+            name: Yowling
+          - entity: binary_sensor.cat_watcher_mia_cat_vomiting
+            name: Vomiting
+
+      - type: history-graph
+        title: Activity History
+        hours_to_show: 24
+        entities:
+          - entity: binary_sensor.cat_watcher_mia_present
+            name: Present
+          - entity: binary_sensor.cat_watcher_mia_cat_eating
+            name: Eating
+          - entity: binary_sensor.cat_watcher_mia_cat_drinking
+            name: Drinking
+
+  - title: Settings
+    path: settings
+    icon: mdi:cog
+    cards:
+      - type: custom:mushroom-title-card
+        title: Cat Watcher Settings
+
+      - type: entities
+        title: Alert Settings
+        entities:
+          - entity: input_boolean.cat_watcher_alerts_enabled
+            name: Enable Alerts
+          - entity: input_boolean.cat_watcher_health_monitor
+            name: Health Monitoring
+
+      - type: entities
+        title: Manual Feeding Log
+        entities:
+          - entity: input_datetime.cat_watcher_starbuck_last_manual_feeding
+            name: Starbuck Last Fed
+          - entity: input_datetime.cat_watcher_apollo_last_manual_feeding
+            name: Apollo Last Fed
+          - entity: input_datetime.cat_watcher_mia_last_manual_feeding
+            name: Mia Last Fed
+
+      - type: button
+        name: Mark All Cats Fed
+        tap_action:
+          action: call-service
+          service: input_datetime.set_datetime
+          data:
+            datetime: "{{ now() }}"
+          target:
+            entity_id:
+              - input_datetime.cat_watcher_starbuck_last_manual_feeding
+              - input_datetime.cat_watcher_apollo_last_manual_feeding
+              - input_datetime.cat_watcher_mia_last_manual_feeding

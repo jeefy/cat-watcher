@@ -1,0 +1,110 @@
+blueprint:
+  name: Cat Feeding Schedule Monitor
+  description: Track cat feeding times and alert if a cat hasn't eaten
+  domain: automation
+  author: Cat Watcher
+  input:
+    cat:
+      name: Cat
+      description: Cat to monitor
+      selector:
+        select:
+          options:
+            - label: Starbuck
+              value: starbuck
+            - label: Apollo
+              value: apollo
+            - label: Mia
+              value: mia
+    max_hours_without_eating:
+      name: Max Hours Without Eating
+      description: Hours without eating before alert
+      default: 12
+      selector:
+        number:
+          min: 4
+          max: 48
+          unit_of_measurement: hours
+    check_interval_hours:
+      name: Check Interval
+      description: How often to check feeding status
+      default: 2
+      selector:
+        number:
+          min: 1
+          max: 12
+          unit_of_measurement: hours
+    notify_device:
+      name: Notification Device
+      description: Device to send notification to
+      selector:
+        device:
+          integration: mobile_app
+    quiet_hours_start:
+      name: Quiet Hours Start
+      description: Don't alert during these hours (start)
+      default: "22:00:00"
+      selector:
+        time:
+    quiet_hours_end:
+      name: Quiet Hours End
+      description: Don't alert during these hours (end)
+      default: "07:00:00"
+      selector:
+        time:
+
+mode: single
+
+trigger:
+  - platform: time_pattern
+    hours: !input check_interval_hours
+
+variables:
+  cat_input: !input cat
+  max_hours: !input max_hours_without_eating
+  cat_name: "{{ cat_input | title }}"
+  last_seen_entity: "sensor.cat_watcher_{{ cat_input }}_last_seen"
+  last_behavior_entity: "sensor.cat_watcher_{{ cat_input }}_behavior"
+  last_eating: >-
+    {% set eating_time = state_attr('sensor.cat_watcher_latest_detection', 'timestamp') %}
+    {% if eating_time and state_attr('sensor.cat_watcher_latest_detection', 'cat') == cat_input 
+       and state_attr('sensor.cat_watcher_latest_detection', 'behavior') == 'cat_eating' %}
+      {{ eating_time }}
+    {% else %}
+      {{ states(last_seen_entity) if states(last_behavior_entity) == 'cat_eating' else none }}
+    {% endif %}
+  hours_since_eating: >-
+    {% if last_eating %}
+      {{ ((now() - last_eating | as_datetime).total_seconds() / 3600) | round(1) }}
+    {% else %}
+      999
+    {% endif %}
+
+condition:
+  # Not during quiet hours
+  - condition: not
+    conditions:
+      - condition: time
+        after: !input quiet_hours_start
+        before: !input quiet_hours_end
+  # Cat hasn't eaten recently
+  - condition: template
+    value_template: "{{ hours_since_eating > max_hours }}"
+
+action:
+  - service: notify.mobile_app_{{ device_attr(device_id(!input notify_device), 'name') | slugify }}
+    data:
+      title: "🍽️ Feeding Alert"
+      message: >-
+        {{ cat_name }} hasn't been detected eating for 
+        {% if hours_since_eating < 999 %}{{ hours_since_eating }} hours{% else %}a while{% endif %}
+      data:
+        group: cat_watcher_feeding
+        tag: "cat_watcher_feeding_{{ cat_input }}"
+        push:
+          interruption-level: "active"
+        actions:
+          - action: "MARK_FED"
+            title: "Mark as Fed"
+          - action: "SNOOZE_4H"
+            title: "Snooze 4h"

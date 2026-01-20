@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cat Watcher - Labeling</title>
+    <style>
+        :root {
+            --bg-dark: #1a1a2e;
+            --bg-card: #16213e;
+            --accent: #e94560;
+            --accent-hover: #ff6b6b;
+            --text: #eaeaea;
+            --text-muted: #a0a0a0;
+            --success: #4ade80;
+            --warning: #fbbf24;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #333;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .source-filter {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .source-filter label {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .source-filter select {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            background: #2a2a4a;
+            color: var(--text);
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--accent);
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 30px;
+        }
+
+        .image-panel {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .image-container {
+            position: relative;
+            width: 100%;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            min-height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .image-container img {
+            max-width: 100%;
+            max-height: 70vh;
+            object-fit: contain;
+        }
+
+        .bbox-overlay {
+            position: absolute;
+            border: 3px solid var(--accent);
+            pointer-events: none;
+        }
+
+        .image-info {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .source-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .source-badge.frigate {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .source-badge.detection {
+            background: #10b981;
+            color: white;
+        }
+
+        .control-panel {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .panel-section {
+            margin-bottom: 25px;
+        }
+
+        .panel-section h3 {
+            font-size: 1rem;
+            margin-bottom: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        .button-grid.single-col {
+            grid-template-columns: 1fr;
+        }
+
+        .btn {
+            padding: 12px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            background: #2a2a4a;
+            color: var(--text);
+        }
+
+        .btn:hover {
+            background: #3a3a5a;
+            transform: translateY(-1px);
+        }
+
+        .btn.selected {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn.success {
+            background: var(--success);
+            color: #000;
+        }
+
+        .btn.warning {
+            background: var(--warning);
+            color: #000;
+        }
+
+        .btn-large {
+            width: 100%;
+            padding: 16px;
+            font-size: 1rem;
+            margin-top: 10px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent);
+        }
+
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: #2a2a4a;
+            color: var(--text);
+            font-family: inherit;
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .navigation {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .navigation .btn {
+            flex: 1;
+        }
+
+        .keyboard-hints {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            font-size: 0.8rem;
+        }
+
+        .keyboard-hints h4 {
+            margin-bottom: 10px;
+            color: var(--text-muted);
+        }
+
+        .keyboard-hints kbd {
+            display: inline-block;
+            padding: 2px 6px;
+            background: #333;
+            border-radius: 4px;
+            margin-right: 5px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+
+        .empty-state h2 {
+            margin-bottom: 10px;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 400px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #333;
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            background: var(--success);
+            color: #000;
+            border-radius: 8px;
+            font-weight: 500;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        @media (max-width: 900px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🐱 Cat Watcher Labeling</h1>
+            <div class="header-controls">
+                <div class="source-filter">
+                    <label for="source-select">Source:</label>
+                    <select id="source-select" onchange="onSourceFilterChange()">
+                        <option value="">All</option>
+                        <option value="frigate">Frigate</option>
+                        <option value="detection">Detection Pipeline</option>
+                    </select>
+                </div>
+                <div class="stats" id="stats">
+                    <div class="stat">
+                        <div class="stat-value" id="unlabeled-count">-</div>
+                        <div class="stat-label">Unlabeled</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value" id="labeled-count">-</div>
+                        <div class="stat-label">Labeled</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value" id="total-count">-</div>
+                        <div class="stat-label">Total</div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <div class="image-panel">
+                <div class="image-container" id="image-container">
+                    <div class="loading" id="loading">
+                        <div class="spinner"></div>
+                    </div>
+                    <img id="sample-image" style="display: none;" />
+                    <div class="bbox-overlay" id="bbox-overlay" style="display: none;"></div>
+                </div>
+                <div class="image-info" id="image-info" style="display: none;">
+                    <span id="sample-source"></span>
+                    <span id="sample-id">-</span>
+                    <span id="sample-camera">-</span>
+                    <span id="sample-timestamp">-</span>
+                    <span id="sample-score">-</span>
+                </div>
+            </div>
+
+            <div class="control-panel">
+                <div class="panel-section">
+                    <h3>Behavior</h3>
+                    <div class="button-grid" id="behavior-buttons"></div>
+                </div>
+
+                <div class="panel-section">
+                    <h3>Cat Identity</h3>
+                    <div class="button-grid" id="cat-buttons"></div>
+                </div>
+
+                <div class="panel-section">
+                    <h3>Quality Flags</h3>
+                    <div class="checkbox-group">
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="is-blurry">
+                            <span>Blurry image</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="is-occluded">
+                            <span>Cat is occluded</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="is-ambiguous">
+                            <span>Behavior ambiguous</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <h3>Notes</h3>
+                    <textarea id="notes" placeholder="Optional notes..."></textarea>
+                </div>
+
+                <button class="btn btn-large success" onclick="submitLabel()">
+                    ✓ Save Label (Enter)
+                </button>
+                <button class="btn btn-large warning" onclick="skipSample()">
+                    ⏭ Skip Sample (S)
+                </button>
+
+                <div class="navigation">
+                    <button class="btn" onclick="previousSample()">← Previous</button>
+                    <button class="btn" onclick="nextSample()">Next →</button>
+                </div>
+
+                <div class="keyboard-hints">
+                    <h4>Keyboard Shortcuts</h4>
+                    <div><kbd>1-7</kbd> Behavior</div>
+                    <div><kbd>Q/W/E/R</kbd> Cat identity</div>
+                    <div><kbd>Enter</kbd> Save</div>
+                    <div><kbd>S</kbd> Skip</div>
+                    <div><kbd>←/→</kbd> Navigate</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast">Saved!</div>
+
+    <script>
+        const API_BASE = '/api';
+        
+        let currentSample = null;
+        let behaviors = [];
+        let cats = [];
+        let selectedBehavior = null;
+        let selectedCat = null;
+        let samples = [];
+        let currentIndex = 0;
+        let selectedSource = '';  // '' = all, 'frigate', 'detection'
+
+        // Initialize
+        async function init() {
+            await Promise.all([
+                loadBehaviors(),
+                loadCats(),
+                loadStats()
+            ]);
+            await loadSamples();
+            setupKeyboardShortcuts();
+        }
+
+        function onSourceFilterChange() {
+            selectedSource = document.getElementById('source-select').value;
+            loadSamples();
+        }
+
+        async function loadBehaviors() {
+            const res = await fetch(`${API_BASE}/behaviors`);
+            behaviors = await res.json();
+            renderBehaviorButtons();
+        }
+
+        async function loadCats() {
+            const res = await fetch(`${API_BASE}/cats`);
+            cats = await res.json();
+            renderCatButtons();
+        }
+
+        async function loadStats() {
+            const res = await fetch(`${API_BASE}/stats`);
+            const stats = await res.json();
+            document.getElementById('unlabeled-count').textContent = stats.unlabeled_samples;
+            document.getElementById('labeled-count').textContent = stats.labeled_samples;
+            document.getElementById('total-count').textContent = stats.total_samples;
+        }
+
+        async function loadSamples() {
+            document.getElementById('loading').style.display = 'flex';
+            document.getElementById('sample-image').style.display = 'none';
+            
+            let url = `${API_BASE}/samples/unlabeled?page_size=50`;
+            if (selectedSource) {
+                url += `&source=${selectedSource}`;
+            }
+            
+            const res = await fetch(url);
+            const data = await res.json();
+            samples = data.items;
+            currentIndex = 0;
+            
+            if (samples.length > 0) {
+                displaySample(samples[0]);
+            } else {
+                showEmptyState();
+            }
+        }
+
+        function displaySample(sample) {
+            currentSample = sample;
+            
+            const img = document.getElementById('sample-image');
+            const loading = document.getElementById('loading');
+            const bbox = document.getElementById('bbox-overlay');
+            const info = document.getElementById('image-info');
+            
+            // Show loading
+            loading.style.display = 'flex';
+            img.style.display = 'none';
+            bbox.style.display = 'none';
+            
+            // Load image
+            img.onload = () => {
+                loading.style.display = 'none';
+                img.style.display = 'block';
+                info.style.display = 'flex';
+                
+                // Position bounding box
+                const container = document.getElementById('image-container');
+                const rect = img.getBoundingClientRect();
+                const containerRect = container.getBoundingClientRect();
+                
+                const scaleX = rect.width / sample.frame_width;
+                const scaleY = rect.height / sample.frame_height;
+                const offsetX = (containerRect.width - rect.width) / 2;
+                const offsetY = (containerRect.height - rect.height) / 2;
+                
+                const box = sample.bounding_box;
+                bbox.style.left = `${offsetX + box.x_min * sample.frame_width * scaleX}px`;
+                bbox.style.top = `${offsetY + box.y_min * sample.frame_height * scaleY}px`;
+                bbox.style.width = `${(box.x_max - box.x_min) * sample.frame_width * scaleX}px`;
+                bbox.style.height = `${(box.y_max - box.y_min) * sample.frame_height * scaleY}px`;
+                bbox.style.display = 'block';
+            };
+            
+            img.src = sample.frame_url;
+            
+            // Update info with source badge
+            const sourceLabel = sample.source === 'detection' ? 'Detection' : 'Frigate';
+            document.getElementById('sample-source').innerHTML = 
+                `<span class="source-badge ${sample.source}">${sourceLabel}</span>`;
+            document.getElementById('sample-id').textContent = sample.id.substring(0, 20) + '...';
+            document.getElementById('sample-camera').textContent = sample.camera;
+            document.getElementById('sample-timestamp').textContent = new Date(sample.timestamp).toLocaleString();
+            
+            // Show appropriate score based on source
+            const score = sample.detection_confidence || sample.frigate_score;
+            document.getElementById('sample-score').textContent = `Score: ${(score * 100).toFixed(1)}%`;
+            
+            // Reset selections
+            selectedBehavior = sample.behavior_label;
+            selectedCat = sample.cat_label;
+            document.getElementById('is-blurry').checked = sample.is_blurry;
+            document.getElementById('is-occluded').checked = sample.is_occluded;
+            document.getElementById('is-ambiguous').checked = sample.is_ambiguous;
+            document.getElementById('notes').value = sample.notes || '';
+            
+            updateButtonStates();
+        }
+
+        function showEmptyState() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('image-container').innerHTML = `
+                <div class="empty-state">
+                    <h2>🎉 All Done!</h2>
+                    <p>No more samples to label.</p>
+                </div>
+            `;
+        }
+
+        function renderBehaviorButtons() {
+            const container = document.getElementById('behavior-buttons');
+            container.innerHTML = behaviors.map((b, i) => `
+                <button class="btn" data-behavior="${b.value}" onclick="selectBehavior('${b.value}')">
+                    ${i + 1}. ${formatLabel(b.name)}
+                </button>
+            `).join('');
+        }
+
+        function renderCatButtons() {
+            const container = document.getElementById('cat-buttons');
+            const keys = ['Q', 'W', 'E', 'R'];
+            container.innerHTML = cats.map((c, i) => `
+                <button class="btn" data-cat="${c.value}" onclick="selectCat('${c.value}')">
+                    ${keys[i] || ''}. ${formatLabel(c.name)}
+                </button>
+            `).join('');
+        }
+
+        function formatLabel(name) {
+            return name.charAt(0) + name.slice(1).toLowerCase().replace(/_/g, ' ');
+        }
+
+        function selectBehavior(value) {
+            selectedBehavior = value;
+            updateButtonStates();
+        }
+
+        function selectCat(value) {
+            selectedCat = value;
+            updateButtonStates();
+        }
+
+        function updateButtonStates() {
+            document.querySelectorAll('[data-behavior]').forEach(btn => {
+                btn.classList.toggle('selected', btn.dataset.behavior === selectedBehavior);
+            });
+            document.querySelectorAll('[data-cat]').forEach(btn => {
+                btn.classList.toggle('selected', btn.dataset.cat === selectedCat);
+            });
+        }
+
+        async function submitLabel() {
+            if (!currentSample) return;
+            
+            const payload = {
+                behavior: selectedBehavior,
+                cat: selectedCat,
+                notes: document.getElementById('notes').value || null,
+                is_blurry: document.getElementById('is-blurry').checked,
+                is_occluded: document.getElementById('is-occluded').checked,
+                is_ambiguous: document.getElementById('is-ambiguous').checked,
+                skip_training: false
+            };
+            
+            try {
+                const res = await fetch(`${API_BASE}/samples/${currentSample.id}/label`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (res.ok) {
+                    showToast('Label saved!');
+                    await loadStats();
+                    nextSample();
+                }
+            } catch (err) {
+                console.error('Failed to save label:', err);
+            }
+        }
+
+        async function skipSample() {
+            if (!currentSample) return;
+            
+            try {
+                const res = await fetch(`${API_BASE}/samples/${currentSample.id}/skip`, {
+                    method: 'POST'
+                });
+                
+                if (res.ok) {
+                    showToast('Sample skipped');
+                    await loadStats();
+                    nextSample();
+                }
+            } catch (err) {
+                console.error('Failed to skip:', err);
+            }
+        }
+
+        function nextSample() {
+            currentIndex++;
+            if (currentIndex < samples.length) {
+                displaySample(samples[currentIndex]);
+            } else {
+                loadSamples();
+            }
+        }
+
+        function previousSample() {
+            if (currentIndex > 0) {
+                currentIndex--;
+                displaySample(samples[currentIndex]);
+            }
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+
+        function setupKeyboardShortcuts() {
+            document.addEventListener('keydown', (e) => {
+                if (e.target.tagName === 'TEXTAREA') return;
+                
+                // Number keys for behaviors
+                if (e.key >= '1' && e.key <= '9') {
+                    const idx = parseInt(e.key) - 1;
+                    if (behaviors[idx]) selectBehavior(behaviors[idx].value);
+                }
+                
+                // Letter keys for cats
+                const catKeys = { 'q': 0, 'w': 1, 'e': 2, 'r': 3 };
+                if (catKeys[e.key.toLowerCase()] !== undefined) {
+                    const idx = catKeys[e.key.toLowerCase()];
+                    if (cats[idx]) selectCat(cats[idx].value);
+                }
+                
+                // Enter to save
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    submitLabel();
+                }
+                
+                // S to skip
+                if (e.key.toLowerCase() === 's') {
+                    e.preventDefault();
+                    skipSample();
+                }
+                
+                // Arrow keys to navigate
+                if (e.key === 'ArrowRight') nextSample();
+                if (e.key === 'ArrowLeft') previousSample();
+            });
+        }
+
+        // Start
+        init();
+    </script>
+</body>
+</html>

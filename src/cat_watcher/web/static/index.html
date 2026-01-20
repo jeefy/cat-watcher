@@ -1,0 +1,3172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cat Watcher</title>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-dark: #1a1a2e;
+            --bg-card: #16213e;
+            --bg-hover: #1f2937;
+            --accent: #e94560;
+            --accent-hover: #ff6b6b;
+            --text: #eaeaea;
+            --text-muted: #a0a0a0;
+            --success: #4ade80;
+            --warning: #fbbf24;
+            --error: #ef4444;
+            --info: #3b82f6;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Hide elements until Alpine.js initializes */
+        [x-cloak] {
+            display: none !important;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        .app {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 240px;
+            background: var(--bg-card);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #333;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo span {
+            color: var(--accent);
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 4px;
+            color: var(--text-muted);
+            text-decoration: none;
+        }
+
+        .nav-item:hover {
+            background: var(--bg-hover);
+            color: var(--text);
+        }
+
+        .nav-item.active {
+            background: var(--accent);
+            color: white;
+        }
+
+        .nav-item svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .nav-section {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin: 20px 0 10px;
+            padding: 0 16px;
+        }
+
+        /* Main Content */
+        .main {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .page-title {
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stat-icon.blue { background: rgba(59, 130, 246, 0.2); color: var(--info); }
+        .stat-icon.green { background: rgba(74, 222, 128, 0.2); color: var(--success); }
+        .stat-icon.yellow { background: rgba(251, 191, 36, 0.2); color: var(--warning); }
+        .stat-icon.red { background: rgba(239, 68, 68, 0.2); color: var(--error); }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* Status Indicators */
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #333;
+        }
+
+        .status-row:last-child {
+            border-bottom: none;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .status-dot.online { background: var(--success); }
+        .status-dot.offline { background: var(--error); }
+        .status-dot.warning { background: var(--warning); }
+
+        /* Buttons */
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+        }
+
+        .btn-secondary {
+            background: var(--bg-hover);
+            color: var(--text);
+        }
+
+        .btn-secondary:hover {
+            background: #374151;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Forms */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 6px;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .form-input, .form-select {
+            width: 100%;
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            background: var(--bg-dark);
+            color: var(--text);
+            font-size: 0.95rem;
+        }
+
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        /* Progress */
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--bg-dark);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent);
+            transition: width 0.3s;
+        }
+
+        /* Tables */
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table th, .table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #333;
+        }
+
+        .table th {
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .table tr:hover {
+            background: var(--bg-hover);
+        }
+
+        /* Badges */
+        .badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .badge-success { background: rgba(74, 222, 128, 0.2); color: var(--success); }
+        .badge-warning { background: rgba(251, 191, 36, 0.2); color: var(--warning); }
+        .badge-error { background: rgba(239, 68, 68, 0.2); color: var(--error); }
+        .badge-info { background: rgba(59, 130, 246, 0.2); color: var(--info); }
+
+        /* Chart Container */
+        .chart-container {
+            position: relative;
+            height: 250px;
+        }
+
+        /* Grid Layouts */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        /* Activity Log */
+        .activity-item {
+            display: flex;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid #333;
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-time {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            min-width: 60px;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid var(--bg-dark);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Alerts */
+        .alert {
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .alert-success { background: rgba(74, 222, 128, 0.1); border: 1px solid var(--success); }
+        .alert-error { background: rgba(239, 68, 68, 0.1); border: 1px solid var(--error); }
+        .alert-warning { background: rgba(251, 191, 36, 0.1); border: 1px solid var(--warning); }
+        .alert-info { background: rgba(59, 130, 246, 0.1); border: 1px solid var(--info); }
+
+        /* Image Grid for Labeling */
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .image-card {
+            background: var(--bg-dark);
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .image-card:hover {
+            transform: scale(1.02);
+        }
+
+        .image-card img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+        }
+
+        .image-card-info {
+            padding: 10px;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 1.5rem;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 20px;
+            background: var(--bg-dark);
+            padding: 4px;
+            border-radius: 8px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-muted);
+        }
+
+        .tab:hover {
+            color: var(--text);
+        }
+
+        .tab.active {
+            background: var(--accent);
+            color: white;
+        }
+
+        /* Labeling Interface Styles */
+        .labeling-interface {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 24px;
+            align-items: start;
+        }
+
+        .labeling-image-panel {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .image-container-label {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 400px;
+            background: #0d0d15;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .bbox-overlay {
+            position: absolute;
+            border: 3px solid var(--accent);
+            pointer-events: none;
+        }
+
+        .image-info-bar {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .labeling-control-panel {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .panel-section {
+            margin-bottom: 25px;
+        }
+
+        .panel-section h3 {
+            font-size: 0.9rem;
+            margin-bottom: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        .label-btn {
+            padding: 12px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            background: #2a2a4a;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .label-btn:hover {
+            background: #3a3a5a;
+            transform: translateY(-1px);
+        }
+
+        .label-btn.selected {
+            background: var(--accent);
+            color: white;
+        }
+
+        .key-hint {
+            display: inline-block;
+            padding: 2px 8px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent);
+        }
+
+        .notes-textarea {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: #2a2a4a;
+            color: var(--text);
+            font-family: inherit;
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        .action-btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            margin-top: 10px;
+            transition: all 0.2s;
+        }
+
+        .action-btn.success {
+            background: var(--success);
+            color: #000;
+        }
+
+        .action-btn.success:hover {
+            background: #3fce70;
+        }
+
+        .action-btn.warning {
+            background: var(--warning);
+            color: #000;
+        }
+
+        .action-btn.warning:hover {
+            background: #f5a623;
+        }
+
+        .navigation-btns {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            align-items: center;
+        }
+
+        .nav-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background: #2a2a4a;
+            color: var(--text);
+            transition: all 0.2s;
+        }
+
+        .nav-btn:hover:not(:disabled) {
+            background: #3a3a5a;
+        }
+
+        .nav-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .nav-counter {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .keyboard-hints {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            font-size: 0.8rem;
+        }
+
+        .keyboard-hints h4 {
+            margin-bottom: 10px;
+            color: var(--text-muted);
+        }
+
+        .keyboard-hints div {
+            margin-bottom: 4px;
+        }
+
+        .keyboard-hints kbd {
+            display: inline-block;
+            padding: 2px 6px;
+            background: #333;
+            border-radius: 4px;
+            margin-right: 5px;
+            font-family: monospace;
+        }
+
+        .stats-mini {
+            display: flex;
+            gap: 20px;
+        }
+
+        .stat-mini-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .stat-mini-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--accent);
+        }
+
+        .stat-mini-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        @media (max-width: 900px) {
+            .labeling-interface {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app" x-data="catWatcher()">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                🐱 <span>Cat</span>Watcher
+            </div>
+
+            <nav>
+                <a class="nav-item" :class="{ active: currentPage === 'dashboard' }" @click="currentPage = 'dashboard'">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+                    </svg>
+                    Dashboard
+                </a>
+
+                <div class="nav-section">Data Pipeline</div>
+
+                <a class="nav-item" :class="{ active: currentPage === 'label' }" @click="currentPage = 'label'">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                    </svg>
+                    Label
+                </a>
+
+                <a class="nav-item" :class="{ active: currentPage === 'prepare' }" @click="currentPage = 'prepare'">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                    </svg>
+                    Prepare
+                </a>
+
+                <a class="nav-item" :class="{ active: currentPage === 'train' }" @click="currentPage = 'train'">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                    </svg>
+                    Train
+                </a>
+
+                <div class="nav-section">Monitor</div>
+
+                <a class="nav-item" :class="{ active: currentPage === 'models' }" @click="currentPage = 'models'">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+                    </svg>
+                    Models
+                </a>
+
+                <a class="nav-item" :class="{ active: currentPage === 'detection' }" @click="currentPage = 'detection'; loadDetectionStatus()">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                    </svg>
+                    Detection
+                </a>
+
+                <div class="nav-section">Config</div>
+
+                <a class="nav-item" :class="{ active: currentPage === 'settings' }" @click="currentPage = 'settings'; loadCatsForSettings(); loadAppSettings()">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    Settings
+                </a>
+            </nav>
+
+            <div style="margin-top: auto; padding-top: 20px; border-top: 1px solid #333;">
+                <div class="status-indicator" style="padding: 8px 16px;">
+                    <span class="status-dot" :class="systemStatus.frigate ? 'online' : 'offline'"></span>
+                    <span style="font-size: 0.85rem;">Frigate</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Dashboard Page -->
+            <div x-show="currentPage === 'dashboard'" x-cloak>
+                <div class="page-header">
+                    <h1 class="page-title">Dashboard</h1>
+                    <button class="btn btn-secondary" @click="refreshDashboard()">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                        Refresh
+                    </button>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon blue">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="stat-value" x-text="stats.total_samples || 0"></div>
+                            <div class="stat-label">Total Samples</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon green">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="stat-value" x-text="stats.labeled_samples || 0"></div>
+                            <div class="stat-label">Labeled</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon yellow">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="stat-value" x-text="stats.unlabeled_samples || 0"></div>
+                            <div class="stat-label">Unlabeled</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon red">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="stat-value" x-text="stats.trainable_samples || 0"></div>
+                            <div class="stat-label">Trainable</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <!-- System Status -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">System Status</h3>
+                        </div>
+                        <div class="status-row">
+                            <span>Frigate NVR</span>
+                            <div class="status-indicator">
+                                <span class="status-dot" :class="systemStatus.frigate ? 'online' : 'offline'"></span>
+                                <span x-text="systemStatus.frigate ? 'Connected' : 'Disconnected'"></span>
+                            </div>
+                        </div>
+                        <div class="status-row">
+                            <span>Storage</span>
+                            <div class="status-indicator">
+                                <span class="status-dot" :class="systemStatus.storage ? 'online' : 'offline'"></span>
+                                <span x-text="systemStatus.storage ? 'Available' : 'Error'"></span>
+                            </div>
+                        </div>
+                        <div class="status-row">
+                            <span>Training</span>
+                            <div class="status-indicator">
+                                <span class="badge" :class="trainingStatus.status === 'running' ? 'badge-warning' : 'badge-info'" x-text="trainingStatus.status"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Behavior Distribution -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Behavior Distribution</h3>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="behaviorChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <!-- Cat Distribution -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Cat Distribution</h3>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="catChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Quick Actions</h3>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                            <button class="btn btn-primary" @click="currentPage = 'detection'" :disabled="detection.status.running">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                </svg>
+                                Start Detection
+                            </button>
+                            <button class="btn btn-secondary" @click="currentPage = 'label'" :disabled="stats.unlabeled_samples === 0">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                                </svg>
+                                Label Samples (<span x-text="stats.unlabeled_samples || 0"></span> pending)
+                            </button>
+                            <button class="btn btn-secondary" @click="currentPage = 'prepare'" :disabled="stats.trainable_samples < 10">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                                </svg>
+                                Prepare Dataset
+                            </button>
+                            <button class="btn btn-secondary" @click="currentPage = 'train'" :disabled="trainingStatus.status === 'running'">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                                </svg>
+                                Train Model
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Label Page -->
+            <div x-show="currentPage === 'label'" x-cloak x-init="$watch('currentPage', (page) => { if (page === 'label') setupLabelKeyboard(); })">
+                <div class="page-header">
+                    <h1 class="page-title">Label Samples</h1>
+                    <div style="display: flex; align-items: center; gap: 20px;">
+                        <div class="stats-mini">
+                            <span class="stat-mini-item">
+                                <span class="stat-mini-value" x-text="stats.unlabeled_samples || 0"></span>
+                                <span class="stat-mini-label">Unlabeled</span>
+                            </span>
+                            <span class="stat-mini-item">
+                                <span class="stat-mini-value" x-text="stats.labeled_samples || 0"></span>
+                                <span class="stat-mini-label">Labeled</span>
+                            </span>
+                            <span class="stat-mini-item">
+                                <span class="stat-mini-value" x-text="stats.total_samples || 0"></span>
+                                <span class="stat-mini-label">Total</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Labeling Interface -->
+                <template x-if="labelSamples.length > 0">
+                    <div class="labeling-interface">
+                        <div class="labeling-image-panel">
+                            <div class="image-container-label" x-ref="imageContainer">
+                                <img 
+                                    :src="labelSamples[labelCurrentIndex]?.frame_path" 
+                                    x-ref="labelImage"
+                                    @load="positionBoundingBox()"
+                                    style="max-width: 100%; max-height: 70vh; object-fit: contain;">
+                                <!-- Only show bbox overlay for frigate samples (detection has burned-in annotations) -->
+                                <div 
+                                    class="bbox-overlay" 
+                                    x-ref="bboxOverlay"
+                                    x-show="labelSamples[labelCurrentIndex]?.bounding_box && labelSamples[labelCurrentIndex]?.source !== 'detection'"
+                                    style="display: none;">
+                                </div>
+                            </div>
+                            <div class="image-info-bar" x-show="labelSamples[labelCurrentIndex]">
+                                <span x-text="(labelSamples[labelCurrentIndex]?.id || '').substring(0, 20) + '...'"></span>
+                                <span x-text="labelSamples[labelCurrentIndex]?.camera"></span>
+                                <span x-text="labelSamples[labelCurrentIndex]?.timestamp ? new Date(labelSamples[labelCurrentIndex].timestamp).toLocaleString() : ''"></span>
+                            </div>
+                        </div>
+
+                        <div class="labeling-control-panel">
+                            <div class="panel-section">
+                                <h3>Behavior</h3>
+                                <div class="button-grid">
+                                    <template x-for="(b, i) in behaviors" :key="b.value">
+                                        <button 
+                                            class="label-btn" 
+                                            :class="{ 'selected': labelForm.behavior === b.value }"
+                                            @click="labelForm.behavior = b.value">
+                                            <span class="key-hint" x-text="i + 1"></span>
+                                            <span x-text="formatBehavior(b.name)"></span>
+                                        </button>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <div class="panel-section">
+                                <h3>Cat Identity</h3>
+                                <div class="button-grid">
+                                    <template x-for="(c, i) in cats" :key="c.value">
+                                        <button 
+                                            class="label-btn" 
+                                            :class="{ 'selected': labelForm.cat === c.value }"
+                                            @click="labelForm.cat = c.value">
+                                            <span class="key-hint" x-text="['Q','W','E','R'][i] || ''"></span>
+                                            <span x-text="formatCat(c.name)"></span>
+                                        </button>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <div class="panel-section">
+                                <h3>Quality Flags</h3>
+                                <div class="checkbox-group">
+                                    <label class="checkbox-item">
+                                        <input type="checkbox" x-model="labelForm.is_blurry">
+                                        <span>Blurry image</span>
+                                    </label>
+                                    <label class="checkbox-item">
+                                        <input type="checkbox" x-model="labelForm.is_occluded">
+                                        <span>Cat is occluded</span>
+                                    </label>
+                                    <label class="checkbox-item">
+                                        <input type="checkbox" x-model="labelForm.is_ambiguous">
+                                        <span>Behavior ambiguous</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="panel-section">
+                                <h3>Notes</h3>
+                                <textarea 
+                                    x-model="labelForm.notes" 
+                                    placeholder="Optional notes..."
+                                    class="notes-textarea"
+                                    @keydown.enter.prevent="saveLabelAndNextNew()">
+                                </textarea>
+                            </div>
+
+                            <button class="action-btn success" @click="saveLabelAndNextNew()">
+                                ✓ Save Label (Enter)
+                            </button>
+                            <button class="action-btn warning" @click="skipSampleNew()">
+                                ⏭ Skip Sample (S)
+                            </button>
+
+                            <div class="navigation-btns">
+                                <button class="nav-btn" @click="prevLabelSample()" :disabled="labelCurrentIndex === 0">← Previous</button>
+                                <span class="nav-counter" x-text="`${labelCurrentIndex + 1} / ${labelSamples.length}`"></span>
+                                <button class="nav-btn" @click="nextLabelSample()" :disabled="labelCurrentIndex >= labelSamples.length - 1">Next →</button>
+                            </div>
+
+                            <div class="keyboard-hints">
+                                <h4>Keyboard Shortcuts</h4>
+                                <div><kbd>1-7</kbd> Behavior</div>
+                                <div><kbd>Q/W/E/R</kbd> Cat identity</div>
+                                <div><kbd>Enter</kbd> Save</div>
+                                <div><kbd>S</kbd> Skip</div>
+                                <div><kbd>←/→</kbd> Navigate</div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Empty State -->
+                <template x-if="labelSamples.length === 0 && !labelLoading">
+                    <div class="card">
+                        <div class="empty-state">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 64px; height: 64px; margin-bottom: 16px;">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <h2>🎉 All Done!</h2>
+                            <p>No more samples to label.</p>
+                            <button class="btn btn-primary" @click="currentPage = 'detection'; loadDetectionStatus()" style="margin-top: 16px;">
+                                Start Live Detection
+                            </button>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Loading State -->
+                <template x-if="labelLoading">
+                    <div class="card">
+                        <div class="empty-state">
+                            <div class="spinner"></div>
+                            <p>Loading samples...</p>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Prepare Page -->
+            <div x-show="currentPage === 'prepare'" x-cloak>
+                <div class="page-header">
+                    <h1 class="page-title">Prepare Dataset</h1>
+                </div>
+
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">New Dataset</h3>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Dataset Name (optional)</label>
+                            <input type="text" class="form-input" x-model="prepareForm.output_name" placeholder="Auto-generated if empty">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Validation Split</label>
+                            <input type="number" class="form-input" x-model="prepareForm.val_split" min="0.1" max="0.5" step="0.05">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Min Samples per Class</label>
+                            <input type="number" class="form-input" x-model="prepareForm.min_samples_per_class" min="1" max="100">
+                        </div>
+
+                        <button class="btn btn-primary" @click="startPrepare()" :disabled="prepareStatus.status === 'running' || stats.trainable_samples < 10">
+                            Prepare Dataset
+                        </button>
+
+                        <template x-if="prepareStatus.status === 'running'">
+                            <div class="alert alert-info" style="margin-top: 16px;">
+                                <div class="spinner"></div>
+                                <span x-text="prepareStatus.message"></span>
+                            </div>
+                        </template>
+
+                        <template x-if="prepareStatus.status === 'completed'">
+                            <div class="alert alert-success" style="margin-top: 16px;">
+                                ✓ <span x-text="prepareStatus.message"></span>
+                            </div>
+                        </template>
+
+                        <template x-if="prepareStatus.status === 'failed'">
+                            <div class="alert alert-error" style="margin-top: 16px;">
+                                ✗ <span x-text="prepareStatus.message"></span>
+                            </div>
+                        </template>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Labeling Stats</h3>
+                        </div>
+                        <div class="status-row">
+                            <span>Trainable Samples</span>
+                            <span x-text="stats.trainable_samples || 0"></span>
+                        </div>
+                        <div class="status-row">
+                            <span>Skipped</span>
+                            <span x-text="stats.skipped_samples || 0"></span>
+                        </div>
+                        <template x-for="(count, behavior) in stats.behavior_distribution || {}" :key="behavior">
+                            <div class="status-row">
+                                <span x-text="behavior"></span>
+                                <span class="badge badge-info" x-text="count"></span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Existing Datasets</h3>
+                        <button class="btn btn-secondary" @click="loadDatasets()">Refresh</button>
+                    </div>
+                    <template x-if="datasets.length === 0">
+                        <div class="empty-state">
+                            <p>No datasets prepared yet</p>
+                        </div>
+                    </template>
+                    <table class="table" x-show="datasets.length > 0">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Train</th>
+                                <th>Val</th>
+                                <th>Classes</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="ds in datasets" :key="ds.name">
+                                <tr>
+                                    <td x-text="ds.name"></td>
+                                    <td x-text="ds.train_samples"></td>
+                                    <td x-text="ds.val_samples"></td>
+                                    <td x-text="ds.classes.length"></td>
+                                    <td x-text="new Date(ds.created_at).toLocaleDateString()"></td>
+                                    <td>
+                                        <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem;" @click="deleteDataset(ds.name)">Delete</button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Train Page -->
+            <div x-show="currentPage === 'train'" x-cloak>
+                <div class="page-header">
+                    <h1 class="page-title">Train Model</h1>
+                </div>
+
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Training Configuration</h3>
+                        </div>
+
+                        <template x-if="trainingStatus.status !== 'running'">
+                            <div>
+                                <div class="form-group">
+                                    <label class="form-label">Dataset</label>
+                                    <select class="form-select" x-model="trainingForm.dataset">
+                                        <option value="">-- Select dataset --</option>
+                                        <template x-for="ds in datasets" :key="ds.name">
+                                            <option :value="ds.name" x-text="`${ds.name} (${ds.train_samples} train)`"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Base Model</label>
+                                    <select class="form-select" x-model="trainingForm.base_model">
+                                        <template x-for="model in baseModels" :key="model.name">
+                                            <option :value="model.name" x-text="`${model.name} - ${model.description}`"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Epochs</label>
+                                    <input type="number" class="form-input" x-model="trainingForm.epochs" min="10" max="1000">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Batch Size</label>
+                                    <input type="number" class="form-input" x-model="trainingForm.batch_size" min="1" max="128">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Image Size</label>
+                                    <input type="number" class="form-input" x-model="trainingForm.image_size" min="320" max="1280" step="32">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Early Stopping Patience</label>
+                                    <input type="number" class="form-input" x-model="trainingForm.patience" min="10" max="200">
+                                </div>
+                                <button class="btn btn-primary" @click="startTraining()" :disabled="!trainingForm.dataset">
+                                    Start Training
+                                </button>
+                            </div>
+                        </template>
+
+                        <template x-if="trainingStatus.status === 'running'">
+                            <div>
+                                <div class="alert alert-info">
+                                    <div class="spinner"></div>
+                                    <span x-text="trainingStatus.message"></span>
+                                </div>
+                                <div style="margin-bottom: 16px;">
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                        <span>Epoch Progress</span>
+                                        <span x-text="`${trainingStatus.current_epoch} / ${trainingStatus.total_epochs}`"></span>
+                                    </div>
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" :style="`width: ${trainingStatus.total_epochs ? (trainingStatus.current_epoch / trainingStatus.total_epochs * 100) : 0}%`"></div>
+                                    </div>
+                                </div>
+                                <div class="status-row">
+                                    <span>Best mAP50</span>
+                                    <span x-text="trainingStatus.best_map50.toFixed(3)"></span>
+                                </div>
+                                <div class="status-row">
+                                    <span>Current Loss</span>
+                                    <span x-text="trainingStatus.current_loss.toFixed(4)"></span>
+                                </div>
+                                <button class="btn btn-secondary" @click="cancelTraining()" style="margin-top: 16px;">
+                                    Cancel Training
+                                </button>
+                            </div>
+                        </template>
+
+                        <template x-if="trainingStatus.status === 'completed'">
+                            <div class="alert alert-success" style="margin-top: 16px;">
+                                ✓ <span x-text="trainingStatus.message"></span>
+                            </div>
+                        </template>
+
+                        <template x-if="trainingStatus.status === 'failed'">
+                            <div class="alert alert-error" style="margin-top: 16px;">
+                                ✗ <span x-text="trainingStatus.message"></span>
+                            </div>
+                        </template>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Training Tips</h3>
+                        </div>
+                        <div style="line-height: 1.8; color: var(--text-muted);">
+                            <p><strong>Base Model:</strong> Start with yolov8n.pt for fast iteration, then try larger models for better accuracy.</p>
+                            <p style="margin-top: 12px;"><strong>Epochs:</strong> 100 is a good starting point. Early stopping will prevent overfitting.</p>
+                            <p style="margin-top: 12px;"><strong>Batch Size:</strong> Larger batches train faster but need more GPU memory. Start with 16.</p>
+                            <p style="margin-top: 12px;"><strong>Image Size:</strong> 640 is standard. Match your inference resolution if possible.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Models Page -->
+            <div x-show="currentPage === 'models'" x-cloak>
+                <div class="page-header">
+                    <h1 class="page-title">Trained Models</h1>
+                    <button class="btn btn-secondary" @click="loadModels()">Refresh</button>
+                </div>
+
+                <div class="card">
+                    <template x-if="models.length === 0">
+                        <div class="empty-state">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+                            </svg>
+                            <p>No models trained yet</p>
+                            <button class="btn btn-primary" @click="currentPage = 'train'" style="margin-top: 16px;">
+                                Train a Model
+                            </button>
+                        </div>
+                    </template>
+
+                    <table class="table" x-show="models.length > 0">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Dataset</th>
+                                <th>mAP50</th>
+                                <th>mAP50-95</th>
+                                <th>Size</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="model in models" :key="model.name">
+                                <tr>
+                                    <td x-text="model.name"></td>
+                                    <td x-text="model.dataset || '-'"></td>
+                                    <td x-text="model.best_map50 ? model.best_map50.toFixed(3) : '-'"></td>
+                                    <td x-text="model.best_map50_95 ? model.best_map50_95.toFixed(3) : '-'"></td>
+                                    <td x-text="`${model.size_mb.toFixed(1)} MB`"></td>
+                                    <td x-text="new Date(model.created_at).toLocaleDateString()"></td>
+                                    <td>
+                                        <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem;" @click="deleteModel(model.name)">Delete</button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Detection Page -->
+            <div x-show="currentPage === 'detection'" x-cloak>
+                <div class="page-header">
+                    <h1 class="page-title">Live Detection</h1>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-secondary" @click="loadDetectionStatus()">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                            </svg>
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Service Status Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Detection Service</h3>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <span class="status-indicator">
+                                <span class="status-dot" :class="detection.status.running ? 'online' : 'offline'"></span>
+                                <span x-text="detection.status.running ? 'Running' : 'Stopped'"></span>
+                            </span>
+                            <template x-if="!detection.status.running">
+                                <button class="btn btn-primary" @click="startDetection()" :disabled="detection.starting">
+                                    <template x-if="detection.starting">
+                                        <span class="spinner" style="width: 16px; height: 16px;"></span>
+                                    </template>
+                                    <template x-if="!detection.starting">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                    </template>
+                                    Start
+                                </button>
+                            </template>
+                            <template x-if="detection.status.running">
+                                <button class="btn btn-secondary" @click="stopDetection()" :disabled="detection.stopping" style="background: var(--error);">
+                                    <template x-if="detection.stopping">
+                                        <span class="spinner" style="width: 16px; height: 16px;"></span>
+                                    </template>
+                                    <template x-if="!detection.stopping">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/>
+                                        </svg>
+                                    </template>
+                                    Stop
+                                </button>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Running stats -->
+                    <template x-if="detection.status.running">
+                        <div class="stats-grid" style="margin-bottom: 0;">
+                            <div class="stat-card">
+                                <div class="stat-icon blue">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <div class="stat-value" x-text="detection.status.active_cameras || 0"></div>
+                                    <div class="stat-label">Active Cameras</div>
+                                </div>
+                            </div>
+
+                            <div class="stat-card">
+                                <div class="stat-icon green">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <div class="stat-value" x-text="detection.status.total_detections || 0"></div>
+                                    <div class="stat-label">Total Detections</div>
+                                </div>
+                            </div>
+
+                            <div class="stat-card">
+                                <div class="stat-icon yellow">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <div class="stat-value" x-text="detection.status.total_events || 0"></div>
+                                    <div class="stat-label">Total Events</div>
+                                </div>
+                            </div>
+
+                            <div class="stat-card">
+                                <div class="stat-icon red">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <div class="stat-value" x-text="formatUptime(detection.status.uptime)"></div>
+                                    <div class="stat-label">Uptime</div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Behavior Inference Service Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">🧠 Behavior Inference (Custom Model)</h3>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <span class="status-indicator">
+                                <span class="status-dot" :class="detection.behavior.status.state === 'running' ? 'online' : 'offline'"></span>
+                                <span x-text="detection.behavior.status.state === 'running' ? 'Running' : (detection.behavior.status.state === 'not_configured' ? 'Not Configured' : 'Stopped')"></span>
+                            </span>
+                            <template x-if="detection.behavior.status.state !== 'running'">
+                                <button class="btn btn-primary" @click="startBehaviorService()" :disabled="detection.behavior.starting || detection.behavior.models.length === 0">
+                                    <template x-if="detection.behavior.starting">
+                                        <span class="spinner" style="width: 16px; height: 16px;"></span>
+                                    </template>
+                                    <template x-if="!detection.behavior.starting">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                    </template>
+                                    Start
+                                </button>
+                            </template>
+                            <template x-if="detection.behavior.status.state === 'running'">
+                                <button class="btn btn-secondary" @click="stopBehaviorService()" :disabled="detection.behavior.stopping" style="background: var(--error);">
+                                    <template x-if="detection.behavior.stopping">
+                                        <span class="spinner" style="width: 16px; height: 16px;"></span>
+                                    </template>
+                                    <template x-if="!detection.behavior.stopping">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/>
+                                        </svg>
+                                    </template>
+                                    Stop
+                                </button>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Model selector -->
+                    <template x-if="detection.behavior.status.state !== 'running'">
+                        <div style="margin-bottom: 16px;">
+                            <label style="display: block; margin-bottom: 8px; color: var(--text-muted); font-size: 0.9rem;">Select Model</label>
+                            <select x-model="detection.behavior.selectedModel" 
+                                    style="width: 100%; padding: 10px; border-radius: 8px; background: var(--bg-dark); border: 1px solid #444; color: var(--text);">
+                                <option value="">-- Select a trained model --</option>
+                                <template x-for="model in detection.behavior.models" :key="model.path">
+                                    <option :value="model.path" x-text="model.name + ' (' + model.size_mb + ' MB)'"></option>
+                                </template>
+                            </select>
+                            <template x-if="detection.behavior.models.length === 0">
+                                <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 8px;">
+                                    No trained models found. Train a model in the Training tab first.
+                                </p>
+                            </template>
+                        </div>
+                    </template>
+
+                    <!-- Running stats -->
+                    <template x-if="detection.behavior.status.state === 'running'">
+                        <div>
+                            <div class="stats-grid" style="margin-bottom: 16px;">
+                                <div class="stat-card">
+                                    <div class="stat-icon blue">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <div class="stat-value" x-text="detection.behavior.status.stats?.events_processed || 0"></div>
+                                        <div class="stat-label">Events Processed</div>
+                                    </div>
+                                </div>
+
+                                <div class="stat-card">
+                                    <div class="stat-icon green">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <div class="stat-value" x-text="Object.values(detection.behavior.status.stats?.behaviors_detected || {}).reduce((a, b) => a + b, 0)"></div>
+                                        <div class="stat-label">Behaviors Detected</div>
+                                    </div>
+                                </div>
+
+                                <div class="stat-card">
+                                    <div class="stat-icon yellow">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <div class="stat-value" x-text="detection.behavior.status.stats?.ha_events_published || 0"></div>
+                                        <div class="stat-label">HA Events Published</div>
+                                    </div>
+                                </div>
+
+                                <div class="stat-card">
+                                    <div class="stat-icon red">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <div class="stat-value" x-text="formatUptime(detection.behavior.status.runtime)"></div>
+                                        <div class="stat-label">Uptime</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Behavior breakdown -->
+                            <template x-if="Object.keys(detection.behavior.status.stats?.behaviors_detected || {}).length > 0">
+                                <div style="margin-bottom: 16px;">
+                                    <h4 style="font-size: 0.9rem; margin-bottom: 8px; color: var(--text-muted);">Behavior Breakdown</h4>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                                        <template x-for="(count, behavior) in detection.behavior.status.stats?.behaviors_detected" :key="behavior">
+                                            <span class="badge badge-info" style="padding: 6px 12px;">
+                                                <span x-text="behavior"></span>: <span x-text="count"></span>
+                                            </span>
+                                        </template>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <!-- Last detection -->
+                            <template x-if="detection.behavior.status.stats?.last_detection">
+                                <div style="background: var(--bg-dark); padding: 12px; border-radius: 8px;">
+                                    <h4 style="font-size: 0.9rem; margin-bottom: 8px; color: var(--text-muted);">Last Detection</h4>
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; font-size: 0.85rem;">
+                                        <div>
+                                            <span style="color: var(--text-muted);">Behavior:</span>
+                                            <span class="badge badge-success" x-text="detection.behavior.status.stats.last_detection.behavior"></span>
+                                        </div>
+                                        <div>
+                                            <span style="color: var(--text-muted);">Confidence:</span>
+                                            <span x-text="(detection.behavior.status.stats.last_detection.confidence * 100).toFixed(1) + '%'"></span>
+                                        </div>
+                                        <div>
+                                            <span style="color: var(--text-muted);">Camera:</span>
+                                            <span x-text="detection.behavior.status.stats.last_detection.camera"></span>
+                                        </div>
+                                        <div>
+                                            <span style="color: var(--text-muted);">HA Published:</span>
+                                            <span x-text="detection.behavior.status.stats.last_detection.ha_published ? '✅' : '❌'"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+
+                    <!-- Model info when running -->
+                    <template x-if="detection.behavior.status.model_loaded">
+                        <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 12px; padding-top: 12px; border-top: 1px solid #333;">
+                            <span style="color: var(--text-muted);">Model:</span>
+                            <span x-text="detection.behavior.status.model_path"></span>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Camera Grid -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Cameras</h3>
+                    </div>
+
+                    <template x-if="detection.cameras.length === 0">
+                        <div class="empty-state">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                            </svg>
+                            <p>No cameras available. Check Frigate connection.</p>
+                        </div>
+                    </template>
+
+                    <div class="image-grid" x-show="detection.cameras.length > 0">
+                        <template x-for="camera in detection.cameras" :key="camera.name">
+                            <div class="card" style="padding: 16px; margin-bottom: 0;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <span style="font-weight: 600;" x-text="camera.name"></span>
+                                    <span class="badge" :class="camera.pipeline_running ? 'badge-success' : 'badge-warning'" x-text="camera.pipeline_running ? 'Active' : 'Idle'"></span>
+                                </div>
+
+                                <!-- Camera stats when running -->
+                                <template x-if="camera.pipeline_running && camera.stats">
+                                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">
+                                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                            <span>FPS:</span>
+                                            <span x-text="camera.stats.fps?.toFixed(1) || '-'"></span>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                            <span>Detections:</span>
+                                            <span x-text="camera.stats.detections || 0"></span>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between;">
+                                            <span>Events:</span>
+                                            <span x-text="camera.stats.events || 0"></span>
+                                        </div>
+                                    </div>
+                                </template>
+
+                                <!-- Enable/Disable buttons -->
+                                <template x-if="detection.status.running">
+                                    <template x-if="!camera.pipeline_running">
+                                        <button class="btn btn-primary" style="width: 100%; font-size: 0.85rem;" @click="enableCamera(camera.name)">
+                                            Enable
+                                        </button>
+                                    </template>
+                                </template>
+                                <template x-if="detection.status.running">
+                                    <template x-if="camera.pipeline_running">
+                                        <button class="btn btn-secondary" style="width: 100%; font-size: 0.85rem;" @click="disableCamera(camera.name)">
+                                            Disable
+                                        </button>
+                                    </template>
+                                </template>
+                                <template x-if="!detection.status.running">
+                                    <button class="btn btn-secondary" style="width: 100%; font-size: 0.85rem;" disabled>
+                                        Start service first
+                                    </button>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Recent Events -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Recent Detections</h3>
+                        <button class="btn btn-secondary" @click="loadRecentEvents()" style="font-size: 0.85rem; padding: 6px 12px;">
+                            Refresh
+                        </button>
+                    </div>
+                    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 16px;">
+                        Detections are automatically saved to the labeling database.
+                    </p>
+
+                    <template x-if="detection.events.length === 0">
+                        <div class="empty-state">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                            <p>No recent detections</p>
+                        </div>
+                    </template>
+
+                    <div class="image-grid" x-show="detection.events.length > 0">
+                        <template x-for="event in detection.events" :key="event.id">
+                            <div class="image-card">
+                                <img :src="'/api/detection/events/' + event.id + '.jpg'" :alt="event.camera" loading="lazy">
+                                <div class="image-card-info">
+                                    <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+                                        <span x-text="event.camera"></span>
+                                        <span style="color: var(--text-muted);" x-text="formatEventTime(event.timestamp)"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Configuration -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Configuration</h3>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; font-size: 0.9rem;">
+                        <div>
+                            <span style="color: var(--text-muted);">Model:</span>
+                            <span x-text="detection.config.cat_model || '-'"></span>
+                        </div>
+                        <div>
+                            <span style="color: var(--text-muted);">Confidence:</span>
+                            <span x-text="detection.config.confidence || '-'"></span>
+                        </div>
+                        <div>
+                            <span style="color: var(--text-muted);">Device:</span>
+                            <span x-text="detection.config.device || '-'"></span>
+                        </div>
+                        <div>
+                            <span style="color: var(--text-muted);">Frame Rate:</span>
+                            <span x-text="(detection.config.frame_rate || '-') + ' FPS'"></span>
+                        </div>
+                        <div>
+                            <span style="color: var(--text-muted);">Configured Cameras:</span>
+                            <span x-text="detection.config.cameras?.join(', ') || 'All'"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Page -->
+            <div x-show="currentPage === 'settings'" x-cloak>
+                <div class="page-header">
+                    <h1 class="page-title">Settings</h1>
+                </div>
+
+                <!-- Cats Management -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">🐱 Your Cats</h3>
+                        <button class="btn btn-primary" @click="showAddCatModal = true">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                            </svg>
+                            Add Cat
+                        </button>
+                    </div>
+                    
+                    <template x-if="settingsCats.length === 0">
+                        <div class="empty-state" style="padding: 40px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 64px; height: 64px; margin-bottom: 16px; opacity: 0.5;">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                            </svg>
+                            <p style="color: var(--text-muted);">No cats added yet. Add your first cat to get started!</p>
+                        </div>
+                    </template>
+
+                    <template x-if="settingsCats.length > 0">
+                        <div class="table-container" style="padding: 16px;">
+                            <table style="width: 100%;">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 20%; text-align: left;">Name</th>
+                                        <th style="width: 15%; text-align: left;">Age</th>
+                                        <th style="width: 45%; text-align: left;">Notes</th>
+                                        <th style="width: 20%; text-align: right;">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="cat in settingsCats" :key="cat.id">
+                                        <tr>
+                                            <td style="padding: 12px 8px;">
+                                                <strong x-text="cat.name.charAt(0).toUpperCase() + cat.name.slice(1)"></strong>
+                                            </td>
+                                            <td style="padding: 12px 8px;" x-text="cat.age ? cat.age + ' years' : '-'"></td>
+                                            <td style="padding: 12px 8px; color: var(--text-muted);" x-text="cat.notes || '-'"></td>
+                                            <td style="padding: 12px 8px; text-align: right;">
+                                                <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                                                    <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.85rem;" @click="editCat(cat)">Edit</button>
+                                                    <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.85rem; color: #ef4444;" @click="confirmDeleteCat(cat)">Delete</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Detection Settings -->
+                <div class="card" style="margin-top: 24px;">
+                    <div class="card-header">
+                        <h3 class="card-title">🎯 Detection Settings</h3>
+                        <button class="btn btn-primary" @click="saveSettings('detection')" :disabled="settingsSaving">
+                            <span x-show="!settingsSaving">Save Changes</span>
+                            <span x-show="settingsSaving">Saving...</span>
+                        </button>
+                    </div>
+                    
+                    <div style="padding: 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;">
+                        <div>
+                            <label style="display: block; margin-bottom: 4px; font-size: 0.9rem; color: var(--text-muted);">Frame Rate (FPS)</label>
+                            <input type="number" x-model="appSettings.detection['detection.frame_rate']" min="1" max="30" step="0.5"
+                                   style="width: 100%; padding: 10px; background: var(--bg-hover); border: 1px solid #444; border-radius: 6px; color: var(--text);">
+                            <small style="color: var(--text-muted);">Target frames per second for processing</small>
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 4px; font-size: 0.9rem; color: var(--text-muted);">Cat Detection Confidence</label>
+                            <input type="number" x-model="appSettings.detection['detection.cat_confidence']" min="0.1" max="1.0" step="0.05"
+                                   style="width: 100%; padding: 10px; background: var(--bg-hover); border: 1px solid #444; border-radius: 6px; color: var(--text);">
+                            <small style="color: var(--text-muted);">Minimum confidence for cat detection (0.0-1.0)</small>
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 4px; font-size: 0.9rem; color: var(--text-muted);">Behavior Classification Confidence</label>
+                            <input type="number" x-model="appSettings.detection['detection.behavior_confidence']" min="0.1" max="1.0" step="0.05"
+                                   style="width: 100%; padding: 10px; background: var(--bg-hover); border: 1px solid #444; border-radius: 6px; color: var(--text);">
+                            <small style="color: var(--text-muted);">Minimum confidence for behavior classification</small>
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 4px; font-size: 0.9rem; color: var(--text-muted);">Min Event Duration (seconds)</label>
+                            <input type="number" x-model="appSettings.detection['detection.min_event_duration']" min="0" max="10" step="0.1"
+                                   style="width: 100%; padding: 10px; background: var(--bg-hover); border: 1px solid #444; border-radius: 6px; color: var(--text);">
+                            <small style="color: var(--text-muted);">Minimum seconds before event is recorded</small>
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 4px; font-size: 0.9rem; color: var(--text-muted);">Max Event Duration (seconds)</label>
+                            <input type="number" x-model="appSettings.detection['detection.max_event_duration']" min="30" max="3600" step="30"
+                                   style="width: 100%; padding: 10px; background: var(--bg-hover); border: 1px solid #444; border-radius: 6px; color: var(--text);">
+                            <small style="color: var(--text-muted);">Maximum seconds before event is force-ended</small>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <input type="checkbox" id="save-frames" x-model="appSettings.detection['detection.save_frames']"
+                                   style="width: 20px; height: 20px; accent-color: var(--accent);">
+                            <label for="save-frames" style="font-size: 0.9rem;">
+                                <span>Save Event Frames</span>
+                                <small style="display: block; color: var(--text-muted);">Store frames for detected events</small>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Frigate Settings -->
+                <div class="card" style="margin-top: 24px;">
+                    <div class="card-header">
+                        <h3 class="card-title">📹 Frigate Connection</h3>
+                        <button class="btn btn-primary" @click="saveSettings('frigate')" :disabled="settingsSaving">
+                            <span x-show="!settingsSaving">Save Changes</span>
+                            <span x-show="settingsSaving">Saving...</span>
+                        </button>
+                    </div>
+                    
+                    <div style="padding: 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;">
+                        <div style="grid-column: 1 / -1;">
+                            <label style="display: block; margin-bottom: 4px; font-size: 0.9rem; color: var(--text-muted);">Frigate API URL</label>
+                            <input type="url" x-model="appSettings.frigate['frigate.url']" placeholder="http://192.168.1.100:5000"
+                                   style="width: 100%; padding: 10px; background: var(--bg-hover); border: 1px solid #444; border-radius: 6px; color: var(--text);">
+                            <small style="color: var(--text-muted);">Base URL for your Frigate instance</small>
+                        </div>
+                        <div style="grid-column: 1 / -1;">
+                            <label style="display: block; margin-bottom: 4px; font-size: 0.9rem; color: var(--text-muted);">Cameras (JSON array)</label>
+                            <input type="text" x-model="appSettings.frigate['frigate.cameras']" placeholder='["camera1", "camera2"] or [] for all'
+                                   style="width: 100%; padding: 10px; background: var(--bg-hover); border: 1px solid #444; border-radius: 6px; color: var(--text);">
+                            <small style="color: var(--text-muted);">List of camera names to monitor. Empty array [] means all cameras.</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MQTT Settings -->
+                <div class="card" style="margin-top: 24px;">
+                    <div class="card-header">
+                        <h3 class="card-title">📡 MQTT Settings</h3>
+                        <button class="btn btn-primary" @click="saveSettings('mqtt')" :disabled="settingsSaving">
+                            <span x-show="!settingsSaving">Save Changes</span>
+                            <span x-show="settingsSaving">Saving...</span>
+                        </button>
+                    </div>
+                    
+                    <div style="padding: 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;">
+                        <div style="display: flex; align-items: center; gap: 12px; grid-column: 1 / -1;">
+                            <input type="checkbox" id="mqtt-enabled" x-model="appSettings.mqtt['mqtt.enabled']"
+                                   style="width: 20px; height: 20px; accent-color: var(--accent);">
+                            <label for="mqtt-enabled" style="font-size: 0.9rem;">
+                                <span>Enable MQTT Publishing</span>
+                                <small style="display: block; color: var(--text-muted);">Publish detection events to MQTT broker</small>
+                            </label>
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 4px; font-size: 0.9rem; color: var(--text-muted);">MQTT Broker</label>
+                            <input type="text" x-model="appSettings.mqtt['mqtt.broker']" placeholder="192.168.1.100"
+                                   style="width: 100%; padding: 10px; background: var(--bg-hover); border: 1px solid #444; border-radius: 6px; color: var(--text);">
+                            <small style="color: var(--text-muted);">Hostname or IP of MQTT broker</small>
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 4px; font-size: 0.9rem; color: var(--text-muted);">MQTT Port</label>
+                            <input type="number" x-model="appSettings.mqtt['mqtt.port']" min="1" max="65535"
+                                   style="width: 100%; padding: 10px; background: var(--bg-hover); border: 1px solid #444; border-radius: 6px; color: var(--text);">
+                            <small style="color: var(--text-muted);">Broker port (usually 1883)</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings Status Message -->
+                <div x-show="settingsMessage" x-cloak 
+                     style="margin-top: 16px; padding: 12px 16px; border-radius: 8px;"
+                     :style="settingsError ? 'background: rgba(239, 68, 68, 0.2); color: #ef4444;' : 'background: rgba(34, 197, 94, 0.2); color: #22c55e;'">
+                    <span x-text="settingsMessage"></span>
+                </div>
+            </div>
+        </main>
+
+        <!-- Welcome Modal (shown when no cats exist) -->
+        <template x-if="showWelcomeModal">
+            <div style="position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: flex; align-items: flex-start; justify-content: center; padding-top: 10vh; z-index: 1000;"
+                 @keydown.escape.window="showWelcomeModal = false">
+                <div style="background: var(--bg-card); border-radius: 12px; padding: 32px; max-width: 500px; width: 90%;"
+                     @click.stop>
+                    <div style="text-align: center; margin-bottom: 24px;">
+                        <div style="font-size: 64px; margin-bottom: 16px;">🐱</div>
+                        <h2 style="margin-bottom: 8px;">Welcome to Cat Watcher!</h2>
+                        <p style="color: var(--text-muted);">Let's get started by adding your first cat.</p>
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 16px;">
+                        <div>
+                            <label style="display: block; margin-bottom: 4px; font-size: 0.9rem;">Cat's Name *</label>
+                            <input type="text" x-model="newCatForm.name" placeholder="e.g., Whiskers" 
+                                   style="width: 100%; padding: 10px; background: var(--bg-hover); border: 1px solid #444; border-radius: 6px; color: var(--text);">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 4px; font-size: 0.9rem;">Age (years)</label>
+                            <input type="number" x-model="newCatForm.age" placeholder="e.g., 3" min="0" max="30"
+                                   style="width: 100%; padding: 10px; background: var(--bg-hover); border: 1px solid #444; border-radius: 6px; color: var(--text);">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 4px; font-size: 0.9rem;">Notes</label>
+                            <textarea x-model="newCatForm.notes" placeholder="e.g., Orange tabby, likes to sit by the window" rows="2"
+                                      style="width: 100%; padding: 10px; background: var(--bg-hover); border: 1px solid #444; border-radius: 6px; color: var(--text); resize: vertical;"></textarea>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 12px; margin-top: 24px;">
+                        <button class="btn btn-secondary" style="flex: 1;" @click="showWelcomeModal = false">Skip for now</button>
+                        <button class="btn btn-primary" style="flex: 1;" @click="addCatFromWelcome()" :disabled="!newCatForm.name.trim()">
+                            Add Cat
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- Add/Edit Cat Modal -->
+        <template x-if="showAddCatModal">
+            <div style="position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: flex; align-items: flex-start; justify-content: center; padding-top: 10vh; z-index: 1001;"
+                 @click="closeAddCatModal()"
+                 @keydown.escape.window="closeAddCatModal()">
+                <div style="background: var(--bg-card); border-radius: 12px; padding: 32px; max-width: 500px; width: 90%;"
+                     @click.stop>
+                    <h2 style="margin-bottom: 24px;" x-text="editingCat ? 'Edit Cat' : 'Add Cat'"></h2>
+                
+                <div style="display: flex; flex-direction: column; gap: 16px;">
+                    <div>
+                        <label style="display: block; margin-bottom: 4px; font-size: 0.9rem;">Name *</label>
+                        <input type="text" x-model="newCatForm.name" placeholder="Cat's name" 
+                               style="width: 100%; padding: 10px; background: var(--bg-hover); border: 1px solid #444; border-radius: 6px; color: var(--text);">
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 4px; font-size: 0.9rem;">Age (years)</label>
+                        <input type="number" x-model="newCatForm.age" placeholder="Age in years" min="0" max="30"
+                               style="width: 100%; padding: 10px; background: var(--bg-hover); border: 1px solid #444; border-radius: 6px; color: var(--text);">
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 4px; font-size: 0.9rem;">Notes</label>
+                        <textarea x-model="newCatForm.notes" placeholder="Any notes about your cat" rows="3"
+                                  style="width: 100%; padding: 10px; background: var(--bg-hover); border: 1px solid #444; border-radius: 6px; color: var(--text); resize: vertical;"></textarea>
+                    </div>
+                </div>
+                
+                <p x-show="catFormError" x-text="catFormError" style="color: #ef4444; margin-top: 12px; font-size: 0.9rem;"></p>
+                
+                <div style="display: flex; gap: 12px; margin-top: 24px;">
+                    <button class="btn btn-secondary" style="flex: 1;" @click="closeAddCatModal()">Cancel</button>
+                    <button class="btn btn-primary" style="flex: 1;" @click="saveCat()" :disabled="!newCatForm.name.trim() || savingCat">
+                        <span x-show="!savingCat" x-text="editingCat ? 'Save Changes' : 'Add Cat'"></span>
+                        <span x-show="savingCat">Saving...</span>
+                    </button>
+                </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- Delete Confirmation Modal -->
+        <template x-if="showDeleteCatModal">
+            <div style="position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; align-items: flex-start; justify-content: center; padding-top: 10vh; z-index: 1002;"
+                 @click="showDeleteCatModal = false; deletingCat = null;"
+                 @keydown.escape.window="showDeleteCatModal = false; deletingCat = null;">
+                <div style="background: var(--bg-card); border-radius: 12px; padding: 32px; max-width: 400px; width: 90%;"
+                     @click.stop>
+                    <h2 style="margin-bottom: 16px;">Delete Cat?</h2>
+                    <p style="color: var(--text-muted); margin-bottom: 24px;">
+                    Are you sure you want to delete <strong x-text="deletingCat?.name"></strong>? 
+                    This won't affect any existing labels.
+                </p>
+                
+                <div style="display: flex; gap: 12px;">
+                    <button class="btn btn-secondary" style="flex: 1;" @click="showDeleteCatModal = false; deletingCat = null;">Cancel</button>
+                    <button class="btn btn-primary" style="flex: 1; background: #ef4444;" @click="deleteCat()">Delete</button>
+                </div>
+                </div>
+            </div>
+        </template>
+    </div>
+
+    <script>
+        function catWatcher() {
+            return {
+                currentPage: 'dashboard',
+                
+                // Stats
+                stats: {},
+                systemStatus: {
+                    frigate: false,
+                    storage: false,
+                },
+                
+                // Cameras (for detection)
+                cameras: [],
+                
+                // Labeling
+                labelTab: 'unlabeled',
+                samples: [],
+                samplesPage: 1,
+                samplesHasMore: false,
+                currentSample: null,
+                labelForm: {
+                    behavior: '',
+                    cat: '',
+                    notes: '',
+                    is_blurry: false,
+                    is_occluded: false,
+                    is_ambiguous: false,
+                },
+                behaviors: [],
+                cats: [],
+                // New labeling interface state
+                labelSamples: [],
+                labelCurrentIndex: 0,
+                labelLoading: false,
+                labelKeyboardSetup: false,
+                
+                // Prepare
+                prepareStatus: { status: 'idle', message: '' },
+                prepareForm: {
+                    output_name: '',
+                    val_split: 0.2,
+                    min_samples_per_class: 5,
+                },
+                datasets: [],
+                
+                // Training
+                trainingStatus: { status: 'idle', message: '', current_epoch: 0, total_epochs: 0, best_map50: 0, current_loss: 0 },
+                trainingForm: {
+                    dataset: '',
+                    epochs: 100,
+                    batch_size: 16,
+                    image_size: 640,
+                    patience: 50,
+                    base_model: 'yolov8n.pt',
+                },
+                baseModels: [],
+                models: [],
+                
+                // Charts
+                behaviorChart: null,
+                catChart: null,
+                
+                // Detection
+                detection: {
+                    status: { running: false, active_cameras: 0, total_detections: 0, total_events: 0, uptime: 0 },
+                    config: {},
+                    cameras: [],
+                    events: [],
+                    starting: false,
+                    stopping: false,
+                    // Behavior service
+                    behavior: {
+                        status: { enabled: false, state: 'stopped', model_loaded: false },
+                        models: [],
+                        selectedModel: '',
+                        starting: false,
+                        stopping: false,
+                    },
+                },
+                
+                // Settings - Cat management
+                settingsCats: [],
+                showWelcomeModal: false,
+                showAddCatModal: false,
+                showDeleteCatModal: false,
+                editingCat: null,
+                deletingCat: null,
+                savingCat: false,
+                catFormError: '',
+                newCatForm: {
+                    name: '',
+                    age: '',
+                    notes: '',
+                },
+                
+                // Settings - App configuration
+                appSettings: {
+                    detection: {},
+                    frigate: {},
+                    mqtt: {},
+                    notifications: {},
+                },
+                settingsSaving: false,
+                settingsMessage: '',
+                settingsError: false,
+                
+                async init() {
+                    await this.refreshDashboard();
+                    await this.loadBehaviorsAndCats();
+                    await this.loadCameras();
+                    await this.loadDatasets();
+                    await this.loadModels();
+                    await this.loadBaseModels();
+                    
+                    // Check if we need to show welcome modal (no cats defined)
+                    await this.checkWelcomeNeeded();
+                    
+                    // Start polling every 5 seconds
+                    setInterval(() => this.pollStatus(), 5000);
+                },
+                
+                async refreshDashboard() {
+                    try {
+                        const [statsRes, statusRes] = await Promise.all([
+                            fetch('/api/dashboard/stats'),
+                            fetch('/api/dashboard/status'),
+                        ]);
+                        
+                        if (statsRes.ok) {
+                            const data = await statsRes.json();
+                            this.stats = data.dataset || {};
+                            this.updateCharts();
+                        }
+                        
+                        if (statusRes.ok) {
+                            const status = await statusRes.json();
+                            this.systemStatus = status;
+                        }
+                    } catch (e) {
+                        console.error('Failed to refresh dashboard:', e);
+                    }
+                },
+                
+                async pollStatus() {
+                    try {
+                        const [trainRes, prepRes, detectRes] = await Promise.all([
+                            fetch('/api/train/status'),
+                            fetch('/api/prepare/status'),
+                            fetch('/api/detection/status'),
+                        ]);
+                        
+                        if (trainRes.ok) this.trainingStatus = await trainRes.json();
+                        if (prepRes.ok) this.prepareStatus = await prepRes.json();
+                        if (detectRes.ok) this.detection.status = await detectRes.json();
+                        
+                        // Refresh stats if something completed
+                        if (this.prepareStatus.status === 'completed') {
+                            await this.refreshDashboard();
+                        }
+                        
+                        // Refresh detection cameras if on detection page and service is running
+                        if (this.currentPage === 'detection' && this.detection.status.running) {
+                            const camRes = await fetch('/api/detection/cameras');
+                            if (camRes.ok) this.detection.cameras = await camRes.json();
+                        }
+                    } catch (e) {
+                        console.error('Polling error:', e);
+                    }
+                },
+                
+                updateCharts() {
+                    // Behavior chart
+                    const behaviorCtx = document.getElementById('behaviorChart');
+                    if (behaviorCtx && this.stats.behavior_distribution) {
+                        if (this.behaviorChart) this.behaviorChart.destroy();
+                        
+                        const labels = Object.keys(this.stats.behavior_distribution);
+                        const data = Object.values(this.stats.behavior_distribution);
+                        
+                        this.behaviorChart = new Chart(behaviorCtx, {
+                            type: 'doughnut',
+                            data: {
+                                labels: labels,
+                                datasets: [{
+                                    data: data,
+                                    backgroundColor: [
+                                        '#e94560', '#4ade80', '#fbbf24', '#3b82f6', '#8b5cf6', '#ec4899'
+                                    ],
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        position: 'right',
+                                        labels: { color: '#eaeaea' }
+                                    }
+                                }
+                            }
+                        });
+                    }
+                    
+                    // Cat chart
+                    const catCtx = document.getElementById('catChart');
+                    if (catCtx && this.stats.cat_distribution) {
+                        if (this.catChart) this.catChart.destroy();
+                        
+                        const labels = Object.keys(this.stats.cat_distribution);
+                        const data = Object.values(this.stats.cat_distribution);
+                        
+                        this.catChart = new Chart(catCtx, {
+                            type: 'bar',
+                            data: {
+                                labels: labels,
+                                datasets: [{
+                                    label: 'Samples',
+                                    data: data,
+                                    backgroundColor: '#e94560',
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: { display: false }
+                                },
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        ticks: { color: '#a0a0a0' },
+                                        grid: { color: '#333' }
+                                    },
+                                    x: {
+                                        ticks: { color: '#a0a0a0' },
+                                        grid: { display: false }
+                                    }
+                                }
+                            }
+                        });
+                    }
+                },
+                
+                async loadBehaviorsAndCats() {
+                    try {
+                        const [bRes, cRes] = await Promise.all([
+                            fetch('/api/behaviors'),
+                            fetch('/api/cats'),
+                        ]);
+                        if (bRes.ok) this.behaviors = await bRes.json();
+                        if (cRes.ok) this.cats = await cRes.json();
+                    } catch (e) {
+                        console.error('Failed to load behaviors/cats:', e);
+                    }
+                },
+                
+                async loadCameras() {
+                    // Load cameras from detection API (uses Frigate for URL discovery)
+                    try {
+                        const res = await fetch('/api/detection/cameras');
+                        if (res.ok) this.cameras = await res.json();
+                    } catch (e) {
+                        console.error('Failed to load cameras:', e);
+                    }
+                },
+                
+                async loadSamples() {
+                    this.samplesPage = 1;
+                    const endpoint = this.labelTab === 'unlabeled' 
+                        ? '/api/samples/unlabeled' 
+                        : '/api/samples/labeled';
+                    
+                    try {
+                        const res = await fetch(`${endpoint}?page=1&page_size=20`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            this.samples = data.items;
+                            this.samplesHasMore = data.has_more;
+                        }
+                    } catch (e) {
+                        console.error('Failed to load samples:', e);
+                    }
+                },
+                
+                async loadMoreSamples() {
+                    this.samplesPage++;
+                    const endpoint = this.labelTab === 'unlabeled' 
+                        ? '/api/samples/unlabeled' 
+                        : '/api/samples/labeled';
+                    
+                    try {
+                        const res = await fetch(`${endpoint}?page=${this.samplesPage}&page_size=20`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            this.samples = [...this.samples, ...data.items];
+                            this.samplesHasMore = data.has_more;
+                        }
+                    } catch (e) {
+                        console.error('Failed to load more samples:', e);
+                    }
+                },
+                
+                openSample(sample) {
+                    this.currentSample = sample;
+                    this.labelForm = {
+                        behavior: sample.behavior || '',
+                        cat: sample.cat || '',
+                        notes: sample.notes || '',
+                        is_blurry: sample.is_blurry || false,
+                        is_occluded: sample.is_occluded || false,
+                        is_ambiguous: sample.is_ambiguous || false,
+                    };
+                },
+                
+                async saveLabelAndNext() {
+                    if (!this.currentSample || !this.labelForm.behavior) return;
+                    
+                    try {
+                        const res = await fetch(`/api/samples/${this.currentSample.id}/label`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(this.labelForm),
+                        });
+                        
+                        if (res.ok) {
+                            // Remove from list and get next
+                            this.samples = this.samples.filter(s => s.id !== this.currentSample.id);
+                            
+                            // Update stats
+                            this.stats.unlabeled_samples = Math.max(0, (this.stats.unlabeled_samples || 0) - 1);
+                            this.stats.labeled_samples = (this.stats.labeled_samples || 0) + 1;
+                            
+                            // Get next sample
+                            if (this.samples.length > 0) {
+                                this.openSample(this.samples[0]);
+                            } else {
+                                this.currentSample = null;
+                                await this.loadSamples();
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Failed to save label:', e);
+                    }
+                },
+                
+                async skipSample() {
+                    if (!this.currentSample) return;
+                    
+                    try {
+                        const res = await fetch(`/api/samples/${this.currentSample.id}/skip`, {
+                            method: 'POST',
+                        });
+                        
+                        if (res.ok) {
+                            this.samples = this.samples.filter(s => s.id !== this.currentSample.id);
+                            
+                            if (this.samples.length > 0) {
+                                this.openSample(this.samples[0]);
+                            } else {
+                                this.currentSample = null;
+                                await this.loadSamples();
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Failed to skip sample:', e);
+                    }
+                },
+                
+                // New labeling interface methods
+                async loadLabelSamples() {
+                    this.labelLoading = true;
+                    try {
+                        const res = await fetch('/api/samples/unlabeled?page_size=200');
+                        if (res.ok) {
+                            const data = await res.json();
+                            this.labelSamples = data.items;
+                            this.labelCurrentIndex = 0;
+                            if (this.labelSamples.length > 0) {
+                                this.resetLabelForm(this.labelSamples[0]);
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Failed to load label samples:', e);
+                    }
+                    this.labelLoading = false;
+                },
+                
+                resetLabelForm(sample) {
+                    this.labelForm = {
+                        behavior: sample?.behavior || '',
+                        cat: sample?.cat || '',
+                        notes: sample?.notes || '',
+                        is_blurry: sample?.is_blurry || false,
+                        is_occluded: sample?.is_occluded || false,
+                        is_ambiguous: sample?.is_ambiguous || false,
+                    };
+                },
+                
+                formatBehavior(name) {
+                    return name.charAt(0) + name.slice(1).toLowerCase().replace(/_/g, ' ');
+                },
+                
+                formatCat(name) {
+                    return name.charAt(0) + name.slice(1).toLowerCase().replace(/_/g, ' ');
+                },
+                
+                async saveLabelAndNextNew() {
+                    if (this.labelSamples.length === 0) return;
+                    
+                    const sample = this.labelSamples[this.labelCurrentIndex];
+                    if (!sample) return;
+                    
+                    try {
+                        const res = await fetch(`/api/samples/${sample.id}/label`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(this.labelForm),
+                        });
+                        
+                        if (res.ok) {
+                            // Remove labeled sample from list
+                            this.labelSamples.splice(this.labelCurrentIndex, 1);
+                            
+                            // Update stats
+                            this.stats.unlabeled_samples = Math.max(0, (this.stats.unlabeled_samples || 0) - 1);
+                            this.stats.labeled_samples = (this.stats.labeled_samples || 0) + 1;
+                            
+                            // Adjust index if needed
+                            if (this.labelCurrentIndex >= this.labelSamples.length) {
+                                this.labelCurrentIndex = Math.max(0, this.labelSamples.length - 1);
+                            }
+                            
+                            // Reset form for next sample
+                            if (this.labelSamples.length > 0) {
+                                this.resetLabelForm(this.labelSamples[this.labelCurrentIndex]);
+                            } else {
+                                // Reload if we've labeled all
+                                await this.loadLabelSamples();
+                            }
+                            
+                            // Show toast
+                            this.showToast('Label saved!');
+                        }
+                    } catch (e) {
+                        console.error('Failed to save label:', e);
+                    }
+                },
+                
+                async skipSampleNew() {
+                    if (this.labelSamples.length === 0) return;
+                    
+                    const sample = this.labelSamples[this.labelCurrentIndex];
+                    if (!sample) return;
+                    
+                    try {
+                        const res = await fetch(`/api/samples/${sample.id}/skip`, {
+                            method: 'POST',
+                        });
+                        
+                        if (res.ok) {
+                            // Remove skipped sample
+                            this.labelSamples.splice(this.labelCurrentIndex, 1);
+                            
+                            // Update stats
+                            this.stats.unlabeled_samples = Math.max(0, (this.stats.unlabeled_samples || 0) - 1);
+                            this.stats.skipped_samples = (this.stats.skipped_samples || 0) + 1;
+                            
+                            // Adjust index
+                            if (this.labelCurrentIndex >= this.labelSamples.length) {
+                                this.labelCurrentIndex = Math.max(0, this.labelSamples.length - 1);
+                            }
+                            
+                            // Reset form
+                            if (this.labelSamples.length > 0) {
+                                this.resetLabelForm(this.labelSamples[this.labelCurrentIndex]);
+                            } else {
+                                await this.loadLabelSamples();
+                            }
+                            
+                            this.showToast('Sample skipped');
+                        }
+                    } catch (e) {
+                        console.error('Failed to skip sample:', e);
+                    }
+                },
+                
+                nextLabelSample() {
+                    if (this.labelCurrentIndex < this.labelSamples.length - 1) {
+                        this.labelCurrentIndex++;
+                        this.resetLabelForm(this.labelSamples[this.labelCurrentIndex]);
+                    }
+                },
+                
+                prevLabelSample() {
+                    if (this.labelCurrentIndex > 0) {
+                        this.labelCurrentIndex--;
+                        this.resetLabelForm(this.labelSamples[this.labelCurrentIndex]);
+                    }
+                },
+                
+                positionBoundingBox() {
+                    const sample = this.labelSamples[this.labelCurrentIndex];
+                    if (!sample?.bounding_box) return;
+                    
+                    const img = this.$refs.labelImage;
+                    const bbox = this.$refs.bboxOverlay;
+                    const container = this.$refs.imageContainer;
+                    
+                    if (!img || !bbox || !container) return;
+                    
+                    // Get image's displayed dimensions and position within container
+                    const imgRect = img.getBoundingClientRect();
+                    const containerRect = container.getBoundingClientRect();
+                    
+                    // Calculate offset of image within container (for centering)
+                    const offsetX = imgRect.left - containerRect.left;
+                    const offsetY = imgRect.top - containerRect.top;
+                    
+                    // Displayed image dimensions
+                    const displayWidth = imgRect.width;
+                    const displayHeight = imgRect.height;
+                    
+                    // Bounding box coordinates are normalized (0-1)
+                    const box = sample.bounding_box;
+                    
+                    // Calculate pixel positions relative to displayed image
+                    const left = offsetX + (box.x_min * displayWidth);
+                    const top = offsetY + (box.y_min * displayHeight);
+                    const width = (box.x_max - box.x_min) * displayWidth;
+                    const height = (box.y_max - box.y_min) * displayHeight;
+                    
+                    bbox.style.left = `${left}px`;
+                    bbox.style.top = `${top}px`;
+                    bbox.style.width = `${width}px`;
+                    bbox.style.height = `${height}px`;
+                    bbox.style.display = 'block';
+                },
+                
+                setupLabelKeyboard() {
+                    if (this.labelKeyboardSetup) return;
+                    this.labelKeyboardSetup = true;
+                    
+                    // Load samples when entering label page
+                    this.loadLabelSamples();
+                    
+                    document.addEventListener('keydown', (e) => {
+                        // Only handle when on label page
+                        if (this.currentPage !== 'label') return;
+                        
+                        // Don't capture when typing in textarea
+                        if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+                        
+                        // Number keys 1-9 for behaviors
+                        if (e.key >= '1' && e.key <= '9') {
+                            const idx = parseInt(e.key) - 1;
+                            if (this.behaviors[idx]) {
+                                this.labelForm.behavior = this.behaviors[idx].value;
+                            }
+                            return;
+                        }
+                        
+                        // Q/W/E/R for cats
+                        const catKeys = { 'q': 0, 'w': 1, 'e': 2, 'r': 3 };
+                        if (catKeys[e.key.toLowerCase()] !== undefined) {
+                            const idx = catKeys[e.key.toLowerCase()];
+                            if (this.cats[idx]) {
+                                this.labelForm.cat = this.cats[idx].value;
+                            }
+                            return;
+                        }
+                        
+                        // Enter to save
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            this.saveLabelAndNextNew();
+                            return;
+                        }
+                        
+                        // S to skip
+                        if (e.key.toLowerCase() === 's') {
+                            e.preventDefault();
+                            this.skipSampleNew();
+                            return;
+                        }
+                        
+                        // Arrow keys for navigation
+                        if (e.key === 'ArrowRight') {
+                            this.nextLabelSample();
+                            return;
+                        }
+                        if (e.key === 'ArrowLeft') {
+                            this.prevLabelSample();
+                            return;
+                        }
+                    });
+                },
+                
+                showToast(message) {
+                    // Simple toast notification
+                    const toast = document.createElement('div');
+                    toast.textContent = message;
+                    toast.style.cssText = `
+                        position: fixed;
+                        bottom: 20px;
+                        right: 20px;
+                        padding: 15px 25px;
+                        background: #4ade80;
+                        color: #000;
+                        border-radius: 8px;
+                        font-weight: 500;
+                        z-index: 9999;
+                        animation: fadeIn 0.3s ease;
+                    `;
+                    document.body.appendChild(toast);
+                    setTimeout(() => toast.remove(), 2000);
+                },
+                
+                async loadDatasets() {
+                    try {
+                        const res = await fetch('/api/prepare/datasets');
+                        if (res.ok) this.datasets = await res.json();
+                    } catch (e) {
+                        console.error('Failed to load datasets:', e);
+                    }
+                },
+                
+                async startPrepare() {
+                    const res = await fetch('/api/prepare/start', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(this.prepareForm),
+                    });
+                    
+                    if (res.ok) {
+                        this.prepareStatus = await res.json();
+                    }
+                },
+                
+                async deleteDataset(name) {
+                    if (!confirm(`Delete dataset "${name}"?`)) return;
+                    
+                    const res = await fetch(`/api/prepare/datasets/${name}`, {
+                        method: 'DELETE',
+                    });
+                    
+                    if (res.ok) {
+                        await this.loadDatasets();
+                    }
+                },
+                
+                async loadModels() {
+                    try {
+                        const res = await fetch('/api/train/models');
+                        if (res.ok) this.models = await res.json();
+                    } catch (e) {
+                        console.error('Failed to load models:', e);
+                    }
+                },
+                
+                async loadBaseModels() {
+                    try {
+                        const res = await fetch('/api/train/base-models');
+                        if (res.ok) this.baseModels = await res.json();
+                    } catch (e) {
+                        console.error('Failed to load base models:', e);
+                    }
+                },
+                
+                async startTraining() {
+                    if (!this.trainingForm.dataset) return;
+                    
+                    const res = await fetch('/api/train/start', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(this.trainingForm),
+                    });
+                    
+                    if (res.ok) {
+                        this.trainingStatus = await res.json();
+                    }
+                },
+                
+                async cancelTraining() {
+                    const res = await fetch('/api/train/cancel', { method: 'POST' });
+                    if (res.ok) {
+                        this.trainingStatus.status = 'cancelled';
+                    }
+                },
+                
+                async deleteModel(name) {
+                    if (!confirm(`Delete model "${name}"?`)) return;
+                    
+                    const res = await fetch(`/api/train/models/${name}`, {
+                        method: 'DELETE',
+                    });
+                    
+                    if (res.ok) {
+                        await this.loadModels();
+                    }
+                },
+                
+                // Detection methods
+                async loadDetectionStatus() {
+                    try {
+                        const [statusRes, configRes, camerasRes] = await Promise.all([
+                            fetch('/api/detection/status'),
+                            fetch('/api/detection/config'),
+                            fetch('/api/detection/cameras'),
+                        ]);
+                        
+                        if (statusRes.ok) this.detection.status = await statusRes.json();
+                        if (configRes.ok) this.detection.config = await configRes.json();
+                        if (camerasRes.ok) this.detection.cameras = await camerasRes.json();
+                        
+                        // Always load recent events (they persist even when service is stopped)
+                        await this.loadRecentEvents();
+                        
+                        // Also load behavior service status
+                        await this.loadBehaviorStatus();
+                    } catch (e) {
+                        console.error('Failed to load detection status:', e);
+                    }
+                },
+                
+                async loadRecentEvents() {
+                    try {
+                        const res = await fetch('/api/detection/events/recent?limit=20');
+                        if (res.ok) this.detection.events = await res.json();
+                    } catch (e) {
+                        console.error('Failed to load recent events:', e);
+                    }
+                },
+                
+                async startDetection() {
+                    this.detection.starting = true;
+                    try {
+                        const res = await fetch('/api/detection/start', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({}),
+                        });
+                        
+                        if (res.ok) {
+                            this.showToast('Detection service started');
+                            await this.loadDetectionStatus();
+                        } else {
+                            const err = await res.json();
+                            this.showToast('Failed to start: ' + (err.detail || 'Unknown error'));
+                        }
+                    } catch (e) {
+                        console.error('Failed to start detection:', e);
+                        this.showToast('Failed to start detection service');
+                    }
+                    this.detection.starting = false;
+                },
+                
+                async stopDetection() {
+                    this.detection.stopping = true;
+                    try {
+                        const res = await fetch('/api/detection/stop', {
+                            method: 'POST',
+                        });
+                        
+                        if (res.ok) {
+                            this.showToast('Detection service stopped');
+                            await this.loadDetectionStatus();
+                        }
+                    } catch (e) {
+                        console.error('Failed to stop detection:', e);
+                    }
+                    this.detection.stopping = false;
+                },
+                
+                async enableCamera(camera) {
+                    try {
+                        const res = await fetch(`/api/detection/cameras/${camera}/enable`, {
+                            method: 'POST',
+                        });
+                        
+                        if (res.ok) {
+                            this.showToast(`Camera ${camera} enabled`);
+                            await this.loadDetectionStatus();
+                        }
+                    } catch (e) {
+                        console.error('Failed to enable camera:', e);
+                    }
+                },
+                
+                async disableCamera(camera) {
+                    try {
+                        const res = await fetch(`/api/detection/cameras/${camera}/disable`, {
+                            method: 'POST',
+                        });
+                        
+                        if (res.ok) {
+                            this.showToast(`Camera ${camera} disabled`);
+                            await this.loadDetectionStatus();
+                        }
+                    } catch (e) {
+                        console.error('Failed to disable camera:', e);
+                    }
+                },
+
+                // Behavior service methods
+                async loadBehaviorStatus() {
+                    try {
+                        const [statusRes, modelsRes] = await Promise.all([
+                            fetch('/api/detection/behavior/status'),
+                            fetch('/api/detection/behavior/models'),
+                        ]);
+                        
+                        if (statusRes.ok) this.detection.behavior.status = await statusRes.json();
+                        if (modelsRes.ok) {
+                            this.detection.behavior.models = await modelsRes.json();
+                            // Auto-select first model if none selected
+                            if (!this.detection.behavior.selectedModel && this.detection.behavior.models.length > 0) {
+                                this.detection.behavior.selectedModel = this.detection.behavior.models[0].path;
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Failed to load behavior status:', e);
+                    }
+                },
+
+                async startBehaviorService() {
+                    if (!this.detection.behavior.selectedModel) {
+                        this.showToast('Please select a model first');
+                        return;
+                    }
+                    
+                    this.detection.behavior.starting = true;
+                    try {
+                        const res = await fetch('/api/detection/behavior/start', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                model_path: this.detection.behavior.selectedModel,
+                            }),
+                        });
+                        
+                        if (res.ok) {
+                            this.showToast('Behavior inference service started');
+                            await this.loadBehaviorStatus();
+                        } else {
+                            const err = await res.json();
+                            this.showToast('Failed to start: ' + (err.detail || 'Unknown error'));
+                        }
+                    } catch (e) {
+                        console.error('Failed to start behavior service:', e);
+                        this.showToast('Failed to start behavior service');
+                    }
+                    this.detection.behavior.starting = false;
+                },
+
+                async stopBehaviorService() {
+                    this.detection.behavior.stopping = true;
+                    try {
+                        const res = await fetch('/api/detection/behavior/stop', {
+                            method: 'POST',
+                        });
+                        
+                        if (res.ok) {
+                            this.showToast('Behavior inference service stopped');
+                            await this.loadBehaviorStatus();
+                        }
+                    } catch (e) {
+                        console.error('Failed to stop behavior service:', e);
+                    }
+                    this.detection.behavior.stopping = false;
+                },
+                
+                formatUptime(seconds) {
+                    if (!seconds) return '-';
+                    const h = Math.floor(seconds / 3600);
+                    const m = Math.floor((seconds % 3600) / 60);
+                    const s = Math.floor(seconds % 60);
+                    if (h > 0) return `${h}h ${m}m`;
+                    if (m > 0) return `${m}m ${s}s`;
+                    return `${s}s`;
+                },
+                
+                formatEventTime(timestamp) {
+                    if (!timestamp) return '-';
+                    const date = new Date(timestamp * 1000);
+                    return date.toLocaleTimeString();
+                },
+
+                // Cat management methods
+                async checkWelcomeNeeded() {
+                    try {
+                        const res = await fetch('/api/cats/all');
+                        if (res.ok) {
+                            const cats = await res.json();
+                            if (cats.length === 0) {
+                                this.showWelcomeModal = true;
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Failed to check cats:', e);
+                    }
+                },
+
+                async loadCatsForSettings() {
+                    try {
+                        const res = await fetch('/api/cats/all');
+                        if (res.ok) {
+                            this.settingsCats = await res.json();
+                        }
+                    } catch (e) {
+                        console.error('Failed to load cats:', e);
+                    }
+                },
+
+                async loadAppSettings() {
+                    try {
+                        const res = await fetch('/api/settings');
+                        if (res.ok) {
+                            const data = await res.json();
+                            // Flatten into category objects with values extracted
+                            for (const [category, settings] of Object.entries(data)) {
+                                this.appSettings[category] = {};
+                                for (const [key, info] of Object.entries(settings)) {
+                                    // Convert string values to appropriate types
+                                    let value = info.value;
+                                    if (value === 'true') value = true;
+                                    else if (value === 'false') value = false;
+                                    else if (!isNaN(value) && value !== '') value = parseFloat(value);
+                                    this.appSettings[category][key] = value;
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Failed to load settings:', e);
+                    }
+                },
+
+                async saveSettings(category) {
+                    this.settingsSaving = true;
+                    this.settingsMessage = '';
+                    this.settingsError = false;
+                    
+                    try {
+                        // Build settings object for this category
+                        const settings = {};
+                        for (const [key, value] of Object.entries(this.appSettings[category] || {})) {
+                            // Convert back to string for storage
+                            settings[key] = String(value);
+                        }
+                        
+                        const res = await fetch('/api/settings', {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ settings }),
+                        });
+                        
+                        if (res.ok) {
+                            this.settingsMessage = `${category.charAt(0).toUpperCase() + category.slice(1)} settings saved successfully!`;
+                            this.settingsError = false;
+                            
+                            // Clear message after 3 seconds
+                            setTimeout(() => { this.settingsMessage = ''; }, 3000);
+                        } else {
+                            const error = await res.json();
+                            this.settingsMessage = error.detail || 'Failed to save settings';
+                            this.settingsError = true;
+                        }
+                    } catch (e) {
+                        console.error('Failed to save settings:', e);
+                        this.settingsMessage = 'Failed to save settings: ' + e.message;
+                        this.settingsError = true;
+                    } finally {
+                        this.settingsSaving = false;
+                    }
+                },
+
+                editCat(cat) {
+                    this.editingCat = cat;
+                    this.newCatForm = {
+                        name: cat.name,
+                        age: cat.age || '',
+                        notes: cat.notes || '',
+                    };
+                    this.catFormError = '';
+                    this.showAddCatModal = true;
+                },
+
+                confirmDeleteCat(cat) {
+                    this.deletingCat = cat;
+                    this.showDeleteCatModal = true;
+                },
+
+                closeAddCatModal() {
+                    this.showAddCatModal = false;
+                    this.editingCat = null;
+                    this.catFormError = '';
+                    this.newCatForm = { name: '', age: '', notes: '' };
+                },
+
+                async saveCat() {
+                    if (!this.newCatForm.name.trim()) return;
+                    
+                    this.savingCat = true;
+                    this.catFormError = '';
+                    
+                    try {
+                        const payload = {
+                            name: this.newCatForm.name.trim(),
+                            age: this.newCatForm.age ? parseInt(this.newCatForm.age) : null,
+                            notes: this.newCatForm.notes.trim() || null,
+                        };
+                        
+                        let res;
+                        if (this.editingCat) {
+                            res = await fetch(`/api/cats/${this.editingCat.id}`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload),
+                            });
+                        } else {
+                            res = await fetch('/api/cats', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload),
+                            });
+                        }
+                        
+                        if (res.ok) {
+                            this.closeAddCatModal();
+                            await this.loadCatsForSettings();
+                            await this.loadBehaviorsAndCats(); // Refresh labeling dropdown
+                            this.showToast(this.editingCat ? 'Cat updated!' : 'Cat added!');
+                        } else {
+                            const err = await res.json();
+                            this.catFormError = err.detail || 'Failed to save cat';
+                        }
+                    } catch (e) {
+                        console.error('Failed to save cat:', e);
+                        this.catFormError = 'Failed to save cat';
+                    }
+                    
+                    this.savingCat = false;
+                },
+
+                async deleteCat() {
+                    if (!this.deletingCat) return;
+                    
+                    try {
+                        const res = await fetch(`/api/cats/${this.deletingCat.id}`, {
+                            method: 'DELETE',
+                        });
+                        
+                        if (res.ok) {
+                            this.showDeleteCatModal = false;
+                            this.deletingCat = null;
+                            await this.loadCatsForSettings();
+                            await this.loadBehaviorsAndCats(); // Refresh labeling dropdown
+                            this.showToast('Cat deleted');
+                        }
+                    } catch (e) {
+                        console.error('Failed to delete cat:', e);
+                    }
+                },
+
+                async addCatFromWelcome() {
+                    if (!this.newCatForm.name.trim()) return;
+                    
+                    try {
+                        const payload = {
+                            name: this.newCatForm.name.trim(),
+                            age: this.newCatForm.age ? parseInt(this.newCatForm.age) : null,
+                            notes: this.newCatForm.notes.trim() || null,
+                        };
+                        
+                        const res = await fetch('/api/cats', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload),
+                        });
+                        
+                        if (res.ok) {
+                            this.showWelcomeModal = false;
+                            this.newCatForm = { name: '', age: '', notes: '' };
+                            await this.loadBehaviorsAndCats(); // Refresh labeling dropdown
+                            this.showToast('Welcome! Your first cat has been added.');
+                        }
+                    } catch (e) {
+                        console.error('Failed to add cat:', e);
+                    }
+                },
+            };
+        }
+    </script>
+</body>
+</html>

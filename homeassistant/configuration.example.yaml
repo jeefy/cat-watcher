@@ -1,0 +1,226 @@
+# Cat Watcher - Home Assistant Configuration Example
+#
+# This file shows example configuration for integrating Cat Watcher
+# with Home Assistant. Copy relevant sections to your configuration.yaml.
+
+# =============================================================================
+# MQTT Configuration
+# =============================================================================
+# Cat Watcher uses MQTT auto-discovery, so entities are created automatically.
+# Make sure your MQTT integration is configured:
+
+mqtt:
+  broker: 192.168.1.82
+  port: 1883
+  # username: your_username  # if authentication required
+  # password: your_password
+  discovery: true
+  discovery_prefix: homeassistant
+
+# =============================================================================
+# Optional: Custom Sensors from MQTT
+# =============================================================================
+# These are created automatically via MQTT discovery, but you can also
+# define them manually if needed:
+
+# sensor:
+#   - platform: mqtt
+#     name: "Cat Watcher Latest Detection"
+#     state_topic: "cat_watcher/latest"
+#     value_template: "{{ value_json.summary }}"
+#     json_attributes_topic: "cat_watcher/latest"
+#     json_attributes_template: "{{ value_json | tojson }}"
+
+# =============================================================================
+# Counter Helpers (for Health Monitoring Blueprint)
+# =============================================================================
+# Create counters for tracking yowling frequency:
+
+counter:
+  cat_watcher_yowling_starbuck:
+    name: "Starbuck Yowling Counter"
+    initial: 0
+    step: 1
+    restore: false
+
+  cat_watcher_yowling_apollo:
+    name: "Apollo Yowling Counter"
+    initial: 0
+    step: 1
+    restore: false
+
+  cat_watcher_yowling_mia:
+    name: "Mia Yowling Counter"
+    initial: 0
+    step: 1
+    restore: false
+
+# =============================================================================
+# Input Helpers (for Manual Override)
+# =============================================================================
+
+input_boolean:
+  cat_watcher_alerts_enabled:
+    name: "Cat Watcher Alerts Enabled"
+    initial: true
+    icon: mdi:bell
+
+  cat_watcher_health_monitor:
+    name: "Cat Health Monitoring"
+    initial: true
+    icon: mdi:heart-pulse
+
+input_datetime:
+  cat_watcher_starbuck_last_manual_feeding:
+    name: "Starbuck Last Manual Feeding"
+    has_date: true
+    has_time: true
+
+  cat_watcher_apollo_last_manual_feeding:
+    name: "Apollo Last Manual Feeding"
+    has_date: true
+    has_time: true
+
+  cat_watcher_mia_last_manual_feeding:
+    name: "Mia Last Manual Feeding"
+    has_date: true
+    has_time: true
+
+# =============================================================================
+# Template Sensors (Computed Values)
+# =============================================================================
+
+template:
+  - sensor:
+      - name: "Active Cats"
+        state: >
+          {% set cats = ['starbuck', 'apollo', 'mia'] %}
+          {% set active = cats | select('is_state', 'binary_sensor.cat_watcher_' ~ item ~ '_present', 'on') | list %}
+          {{ active | length }}
+        attributes:
+          cats: >
+            {% set cats = ['starbuck', 'apollo', 'mia'] %}
+            {% set active = [] %}
+            {% for cat in cats %}
+              {% if is_state('binary_sensor.cat_watcher_' ~ cat ~ '_present', 'on') %}
+                {% set active = active + [cat | title] %}
+              {% endif %}
+            {% endfor %}
+            {{ active }}
+
+      - name: "Cat Watcher Daily Events"
+        state: "{{ states('sensor.cat_watcher_events_processed') | int }}"
+        # Reset daily via automation
+
+  - binary_sensor:
+      - name: "Any Cat Vomiting"
+        state: "{{ is_state('binary_sensor.cat_watcher_cat_vomiting', 'on') }}"
+        device_class: problem
+
+      - name: "Cat Health Alert"
+        state: >
+          {{ is_state('binary_sensor.cat_watcher_cat_vomiting', 'on') or
+             (states('counter.cat_watcher_yowling_starbuck') | int > 3) or
+             (states('counter.cat_watcher_yowling_apollo') | int > 3) or
+             (states('counter.cat_watcher_yowling_mia') | int > 3) }}
+        device_class: problem
+
+# =============================================================================
+# Automations
+# =============================================================================
+
+automation:
+  # Reset yowling counters periodically
+  - id: cat_watcher_reset_yowling_counters
+    alias: "Cat Watcher: Reset Yowling Counters"
+    trigger:
+      - platform: time_pattern
+        minutes: "/30"
+    action:
+      - service: counter.reset
+        target:
+          entity_id:
+            - counter.cat_watcher_yowling_starbuck
+            - counter.cat_watcher_yowling_apollo
+            - counter.cat_watcher_yowling_mia
+
+  # Log vomiting events to logbook
+  - id: cat_watcher_log_vomiting
+    alias: "Cat Watcher: Log Vomiting to Health Diary"
+    trigger:
+      - platform: mqtt
+        topic: "cat_watcher/alert/cat_vomiting"
+    action:
+      - service: logbook.log
+        data:
+          name: "Cat Health"
+          message: "{{ trigger.payload_json.cat | title }} vomited"
+          entity_id: binary_sensor.cat_watcher_cat_vomiting
+          domain: cat_watcher
+
+  # Example: Turn on light when cat is at door
+  - id: cat_watcher_door_light
+    alias: "Cat Watcher: Door Light for Waiting Cat"
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.cat_watcher_cat_waiting
+        to: "on"
+    condition:
+      - condition: sun
+        after: sunset
+        before: sunrise
+    action:
+      - service: light.turn_on
+        target:
+          entity_id: light.front_door  # Replace with your light
+        data:
+          brightness_pct: 50
+      - wait_for_trigger:
+          - platform: state
+            entity_id: binary_sensor.cat_watcher_cat_waiting
+            to: "off"
+        timeout: "00:10:00"
+      - service: light.turn_off
+        target:
+          entity_id: light.front_door
+
+# =============================================================================
+# Lovelace Dashboard Cards
+# =============================================================================
+# Add these to your Lovelace dashboard configuration:
+#
+# type: entities
+# title: Cat Watcher
+# entities:
+#   - entity: binary_sensor.cat_watcher_status
+#   - entity: sensor.cat_watcher_events_processed
+#   - type: divider
+#   - entity: binary_sensor.cat_watcher_starbuck_present
+#   - entity: sensor.cat_watcher_starbuck_behavior
+#   - entity: sensor.cat_watcher_starbuck_last_seen
+#   - type: divider
+#   - entity: binary_sensor.cat_watcher_apollo_present
+#   - entity: sensor.cat_watcher_apollo_behavior
+#   - entity: sensor.cat_watcher_apollo_last_seen
+#   - type: divider  
+#   - entity: binary_sensor.cat_watcher_mia_present
+#   - entity: sensor.cat_watcher_mia_behavior
+#   - entity: sensor.cat_watcher_mia_last_seen
+
+# Mushroom cards example:
+# type: horizontal-stack
+# cards:
+#   - type: custom:mushroom-entity-card
+#     entity: binary_sensor.cat_watcher_starbuck_present
+#     name: Starbuck
+#     icon: mdi:cat
+#     tap_action:
+#       action: more-info
+#   - type: custom:mushroom-entity-card
+#     entity: binary_sensor.cat_watcher_apollo_present
+#     name: Apollo
+#     icon: mdi:cat
+#   - type: custom:mushroom-entity-card
+#     entity: binary_sensor.cat_watcher_mia_present
+#     name: Mia
+#     icon: mdi:cat

@@ -1,0 +1,125 @@
+# ===========================================
+# Python
+# ===========================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+plans/
+
+# ===========================================
+# Virtual environments
+# ===========================================
+.venv/
+venv/
+ENV/
+env/
+.env.local
+
+# ===========================================
+# IDE / Editor
+# ===========================================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+
+# ===========================================
+# Testing / Type checking / Linting
+# ===========================================
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+
+# ===========================================
+# Secrets & Environment
+# ===========================================
+.env
+!.env.example
+*.pem
+*.key
+secrets.yaml
+!secrets.yaml.template
+
+# ===========================================
+# Pre-trained Models (License restrictions)
+# ===========================================
+# YOLOv8 base models are auto-downloaded at runtime
+# These are under AGPL-3.0 license and should not be redistributed
+yolov8*.pt
+yolov8*.onnx
+
+# ===========================================
+# User Data & Trained Models
+# ===========================================
+# Training data, detection events, and user-specific datasets
+data/
+
+# User-trained models (may contain personal data patterns)
+models/
+
+# Temporary frames and images
+*.png
+!docs/*.png
+frame.png
+
+# ===========================================
+# Kubernetes Secrets (actual values)
+# ===========================================
+k8s/secrets.yaml
+k8s/configmap.yaml
+
+# ===========================================
+# Docker volumes / local data
+# ===========================================
+mosquitto_data/
+mosquitto_log/
+
+# ===========================================
+# macOS
+# ===========================================
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# ===========================================
+# Jupyter Notebooks
+# ===========================================
+.ipynb_checkpoints/
+*.ipynb
+
+# ===========================================
+# Logs
+# ===========================================
+*.log
+logs/

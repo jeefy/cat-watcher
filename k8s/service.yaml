@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: cat-watcher
+  namespace: cat-watcher
+  labels:
+    app.kubernetes.io/name: cat-watcher
+    app.kubernetes.io/component: labeling
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 80
+      targetPort: 8080
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: cat-watcher
+    app.kubernetes.io/component: labeling

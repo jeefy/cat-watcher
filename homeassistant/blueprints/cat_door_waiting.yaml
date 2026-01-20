@@ -1,0 +1,105 @@
+blueprint:
+  name: Cat Door Waiting Alert
+  description: Alert when a cat is waiting at a door for too long
+  domain: automation
+  author: Cat Watcher
+  input:
+    notify_device:
+      name: Notification Device
+      description: Device to send notification to
+      selector:
+        device:
+          integration: mobile_app
+    wait_duration_seconds:
+      name: Wait Duration
+      description: How long waiting before alert (seconds)
+      default: 30
+      selector:
+        number:
+          min: 10
+          max: 300
+          unit_of_measurement: seconds
+    auto_action_enabled:
+      name: Enable Auto Action
+      description: Optionally trigger another action (e.g., unlock door)
+      default: false
+      selector:
+        boolean:
+    auto_action_script:
+      name: Auto Action Script
+      description: Script to run when cat is waiting
+      default: ""
+      selector:
+        entity:
+          domain: script
+    announce_enabled:
+      name: Voice Announcement
+      description: Announce on smart speakers
+      default: false
+      selector:
+        boolean:
+    announce_device:
+      name: Announcement Device
+      description: Smart speaker for announcements
+      default: ""
+      selector:
+        entity:
+          domain: media_player
+
+mode: restart
+
+trigger:
+  - platform: state
+    entity_id: binary_sensor.cat_watcher_cat_waiting
+    to: "on"
+    for:
+      seconds: !input wait_duration_seconds
+
+variables:
+  cat_waiting: >-
+    {% for cat in ['starbuck', 'apollo', 'mia'] %}
+      {% if is_state('binary_sensor.cat_watcher_' ~ cat ~ '_cat_waiting', 'on') %}
+        {{ cat | title }}
+      {% endif %}
+    {% endfor %}
+
+condition: []
+
+action:
+  - service: notify.mobile_app_{{ device_attr(device_id(!input notify_device), 'name') | slugify }}
+    data:
+      title: "🚪 Cat at Door"
+      message: "{{ cat_waiting if cat_waiting else 'A cat' }} is waiting at the door"
+      data:
+        group: cat_watcher_door
+        tag: "cat_watcher_door_waiting"
+        push:
+          interruption-level: "time-sensitive"
+        actions:
+          - action: "OPEN_DOOR"
+            title: "Open Door"
+          - action: "DISMISS"
+            title: "Dismiss"
+
+  - if:
+      - condition: template
+        value_template: !input announce_enabled
+      - condition: template
+        value_template: "{{ announce_device != '' }}"
+    then:
+      - service: tts.speak
+        target:
+          entity_id: !input announce_device
+        data:
+          message: "{{ cat_waiting if cat_waiting else 'A cat' }} is waiting at the door"
+          cache: true
+
+  - if:
+      - condition: template
+        value_template: !input auto_action_enabled
+      - condition: template
+        value_template: "{{ auto_action_script != '' }}"
+    then:
+      - service: script.turn_on
+        target:
+          entity_id: !input auto_action_script

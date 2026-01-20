@@ -1,0 +1,77 @@
+# Default configuration template - copy to config.yaml and customize
+# Environment variables can override these settings with CAT_WATCHER__ prefix
+# e.g., CAT_WATCHER__FRIGATE__URL=http://localhost:5000
+
+frigate:
+  url: "http://192.168.50.36:5000"
+  camera: "apollo-dish"
+  # API timeout in seconds
+  timeout: 30.0
+
+mqtt:
+  host: "192.168.1.82"
+  port: 1883
+  websocket_port: 1884
+  # Optional authentication
+  # username: ""
+  # password: ""
+  # Topic prefix for Frigate events
+  frigate_topic_prefix: "frigate"
+  # Topic prefix for cat-watcher events
+  topic_prefix: "cat_watcher"
+
+inference:
+  # Minimum confidence to report a detection
+  confidence_threshold: 0.7
+  # Seconds between duplicate alerts for same behavior
+  cooldown_seconds: 300
+  # Batch size for inference
+  batch_size: 1
+  # Use GPU if available
+  device: "cuda"
+
+# Per-behavior cooldowns (seconds) - overrides default
+cooldowns:
+  eating: 60
+  drinking: 60
+  vomiting: 0  # Always alert immediately
+  waiting: 300
+  litterbox: 300
+  yowling: 60
+
+# Cat definitions
+cats:
+  - name: "starbuck"
+    description: "Similar to Apollo"
+  - name: "apollo"
+    description: "Similar to Starbuck"
+  - name: "mia"
+    description: "Tortoiseshell - distinct coloring"
+
+# Model paths
+models:
+  behavior: "models/behavior.onnx"
+  cat_id: "models/cat_id.onnx"
+  # Audio model for yowling detection (future)
+  audio: "models/audio.onnx"
+
+# Data storage paths
+storage:
+  data_dir: "data"
+  frames_dir: "data/frames"
+  labels_dir: "data/labels"
+  clips_dir: "data/clips"
+
+# Labeling service settings
+labeling:
+  host: "0.0.0.0"
+  port: 8001
+  # SQLite database for labels
+  database: "data/labels.db"
+
+# Home Assistant integration (optional)
+# homeassistant:
+#   url: "http://homeassistant.local:8123"
+#   token: "your-long-lived-access-token"
+#   # Entity IDs for notifications
+#   notify_service: "notify.mobile_app"

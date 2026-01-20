@@ -1,0 +1,127 @@
+blueprint:
+  name: Cat Health Monitor
+  description: Monitor for potential health issues (vomiting, excessive yowling)
+  domain: automation
+  author: Cat Watcher
+  input:
+    notify_device:
+      name: Notification Device
+      description: Device to send notification to
+      selector:
+        device:
+          integration: mobile_app
+    vomiting_enabled:
+      name: Alert on Vomiting
+      description: Send alert when vomiting is detected
+      default: true
+      selector:
+        boolean:
+    yowling_enabled:
+      name: Alert on Yowling
+      description: Send alert when excessive yowling is detected
+      default: true
+      selector:
+        boolean:
+    yowling_threshold:
+      name: Yowling Count Threshold
+      description: Number of yowling events in timeframe to trigger alert
+      default: 3
+      selector:
+        number:
+          min: 1
+          max: 10
+    yowling_timeframe:
+      name: Yowling Timeframe (minutes)
+      description: Timeframe for counting yowling events
+      default: 30
+      selector:
+        number:
+          min: 5
+          max: 120
+          unit_of_measurement: minutes
+    critical_alerts:
+      name: Critical Alerts
+      description: Make health alerts critical/high-priority
+      default: true
+      selector:
+        boolean:
+
+mode: queued
+max: 10
+
+trigger:
+  - platform: mqtt
+    topic: "cat_watcher/alert/cat_vomiting"
+    id: vomiting
+  - platform: mqtt
+    topic: "cat_watcher/alert/cat_yowling"
+    id: yowling
+
+variables:
+  payload: "{{ trigger.payload_json }}"
+  cat_name: "{{ payload.cat | title }}"
+  behavior: "{{ payload.behavior | replace('cat_', '') | title }}"
+  camera: "{{ payload.camera }}"
+  timestamp: "{{ payload.timestamp }}"
+
+action:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: vomiting
+          - condition: template
+            value_template: !input vomiting_enabled
+        sequence:
+          - service: notify.mobile_app_{{ device_attr(device_id(!input notify_device), 'name') | slugify }}
+            data:
+              title: "⚠️ Cat Health Alert"
+              message: "{{ cat_name }} was detected vomiting{% if camera %} ({{ camera }}){% endif %}"
+              data:
+                group: cat_watcher_health
+                tag: "cat_watcher_health_{{ payload.cat }}"
+                push:
+                  sound:
+                    name: "default"
+                    critical: !input critical_alerts
+                  interruption-level: "critical"
+                actions:
+                  - action: "LOG_HEALTH"
+                    title: "Log to Health Diary"
+                  - action: "VIEW_CAMERA"
+                    title: "View Camera"
+          - service: persistent_notification.create
+            data:
+              title: "Cat Health Alert"
+              message: "{{ cat_name }} was detected vomiting at {{ timestamp }}{% if camera %} on {{ camera }}{% endif %}"
+              notification_id: "cat_health_{{ payload.cat }}_{{ now().timestamp() | int }}"
+
+      - conditions:
+          - condition: trigger
+            id: yowling
+          - condition: template
+            value_template: !input yowling_enabled
+        sequence:
+          # Count recent yowling events
+          - service: counter.increment
+            target:
+              entity_id: counter.cat_watcher_yowling_{{ payload.cat }}
+          - delay:
+              seconds: 1
+          - condition: template
+            value_template: >-
+              {{ states('counter.cat_watcher_yowling_' ~ payload.cat) | int >=
+              (yowling_threshold | default(3)) }}
+          - service: notify.mobile_app_{{ device_attr(device_id(!input notify_device), 'name') | slugify }}
+            data:
+              title: "⚠️ Excessive Yowling Alert"
+              message: "{{ cat_name }} has been yowling frequently"
+              data:
+                group: cat_watcher_health
+                push:
+                  sound:
+                    name: "default"
+                    critical: !input critical_alerts
+                  interruption-level: "time-sensitive"
+          - service: counter.reset
+            target:
+              entity_id: counter.cat_watcher_yowling_{{ payload.cat }}
