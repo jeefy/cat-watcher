@@ -33,6 +33,7 @@ class CatBehaviorDataset(Dataset[tuple[torch.Tensor, dict[str, Any]]]):
         BehaviorType.WAITING,
         BehaviorType.LITTERBOX,
         BehaviorType.YOWLING,
+        BehaviorType.SLEEPING,
         BehaviorType.PRESENT,
     ]
 

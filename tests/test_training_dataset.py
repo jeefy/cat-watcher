@@ -26,17 +26,18 @@ class TestCatBehaviorDataset:
     def test_class_names(self) -> None:
         """Test class names are correct."""
         names = CatBehaviorDataset.class_names()
-        assert "eating" in names
-        assert "drinking" in names
-        assert "vomiting" in names
-        assert "waiting" in names
-        assert "litterbox" in names
-        assert "yowling" in names
-        assert "present" in names
+        assert "cat_eating" in names
+        assert "cat_drinking" in names
+        assert "cat_vomiting" in names
+        assert "cat_waiting" in names
+        assert "cat_litterbox" in names
+        assert "cat_yowling" in names
+        assert "cat_sleeping" in names
+        assert "cat_present" in names
 
     def test_num_classes(self) -> None:
         """Test number of classes."""
-        assert CatBehaviorDataset.num_classes() == 7
+        assert CatBehaviorDataset.num_classes() == 8
 
     def test_empty_dataset(self) -> None:
         """Test behavior with non-existent directory."""
@@ -170,9 +171,9 @@ class TestDataYaml:
 
             assert "train: images/train" in content
             assert "val: images/val" in content
-            assert "nc: 7" in content
-            assert "eating" in content
-            assert "drinking" in content
+            assert "nc: 8" in content
+            assert "cat_eating" in content
+            assert "cat_sleeping" in content
 
     def test_custom_output_path(self) -> None:
         """Test custom output path for data.yaml."""

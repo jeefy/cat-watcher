@@ -52,6 +52,8 @@ RUN pip install --no-cache-dir \
     numpy>=1.26.0 \
     pyyaml>=6.0.0 \
     structlog>=24.1.0 \
+    # Polars with CPU compatibility for older CPUs
+    polars-lts-cpu \
     # Web/API
     fastapi>=0.109.0 \
     "uvicorn[standard]>=0.27.0" \

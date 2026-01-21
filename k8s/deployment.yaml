@@ -33,6 +33,9 @@ spec:
               containerPort: 8080
               protocol: TCP
           env:
+            # Polars CPU compatibility - skip check for older CPUs
+            - name: POLARS_SKIP_CPU_CHECK
+              value: "1"
             # Secrets only - all other config is stored in the database
             # and configurable via the web UI
             - name: CAT_WATCHER__FRIGATE__RTSP_USERNAME
@@ -61,18 +64,16 @@ spec:
                   optional: true
           resources:
             requests:
-              memory: "512Mi"
-              cpu: "250m"
               nvidia.com/gpu: "1"
             limits:
-              memory: "2Gi"
-              cpu: "1000m"
               nvidia.com/gpu: "1"
           volumeMounts:
             - name: data
               mountPath: /data
             - name: models
               mountPath: /models
+            - name: dshm
+              mountPath: /dev/shm
           livenessProbe:
             httpGet:
               path: /api/health
@@ -92,6 +93,10 @@ spec:
         - name: models
           persistentVolumeClaim:
             claimName: cat-watcher-models
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 2Gi
       nodeSelector:
         nvidia.com/gpu.present: "true"
       tolerations:

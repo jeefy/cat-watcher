@@ -21,7 +21,7 @@ class BehaviorTrainerConfig:
     epochs: int = 100
     batch_size: int = 16
     patience: int = 20  # Early stopping patience
-    workers: int = 4
+    workers: int = 0  # 0 for GPU training to avoid multiprocessing issues
 
     # Optimization
     lr0: float = 0.01  # Initial learning rate
@@ -47,7 +47,7 @@ class BehaviorTrainerConfig:
 
     # Hardware
     device: str = ""  # 'cpu', '0', '0,1', etc. Empty for auto
-    amp: bool = True  # Automatic mixed precision
+    amp: bool = False  # Disable AMP - causes issues on older GPUs like GTX 1660
 
     # Output
     project: str = "runs/detect"
